@@ -4,8 +4,6 @@ Protótipo navegável do Vezulo: landing, login, cadastro e painéis de **candid
 **empresa** com o sistema de métricas (match IA explicável, funil de vagas, economia de Vezus,
 conquistas). É HTML/CSS/JS puro, arquivo único — **sem etapa de build**.
 
-AUTO-DEPLOY TESTE
-
 ## Estrutura
 - `index.html` — a aplicação inteira (self-contained)
 - `docs/sistema-metricas.md` — especificação do sistema de métricas (para a Fase 2 no WordPress)
