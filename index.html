@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vezulo — Protótipo navegável</title>
+<style>
+  :root{
+    --navy:#101f4e; --navy-2:#0c1738; --navy-line:#26356b;
+    --blue:#1e40af; --blue-2:#2563eb; --blue-3:#3b82f6; --blue-soft:#eaf0fe;
+    --bg:#f3f5fb; --card:#ffffff; --line:#e7ebf4;
+    --ink:#0f1e46; --muted:#6b7480; --muted-2:#9aa2b1;
+    --green:#16a34a; --green-bg:#e7f7ec;
+    --orange:#f59e0b; --orange-2:#f97316; --orange-bg:#fff2df;
+    --purple:#7c3aed; --pink:#db2777; --red:#dc2626;
+    --radius:16px; --shadow:0 1px 2px rgba(16,31,78,.04),0 8px 24px rgba(16,31,78,.06);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+  button{font-family:inherit}
+  .hidden{display:none!important}
+
+  /* ---------- BUTTONS ---------- */
+  .btn{border:0;border-radius:11px;padding:11px 17px;font-weight:600;font-size:13.5px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;justify-content:center}
+  .btn.primary{background:var(--blue);color:#fff}
+  .btn.dark{background:var(--navy);color:#fff}
+  .btn.ghost{background:#fff;border:1px solid var(--line);color:var(--ink)}
+  .btn.orange{background:var(--orange-2);color:#fff}
+  .btn.block{width:100%}
+  .btn.lg{padding:13px 22px;font-size:14.5px}
+
+  /* ---------- LANDING ---------- */
+  .lp{min-height:100vh;background:
+      radial-gradient(1200px 500px at 80% -10%,#eaf0fe 0,transparent 60%),
+      radial-gradient(900px 500px at 0% 110%,#fff2df 0,transparent 55%),#fff;}
+  .lp-nav{display:flex;align-items:center;justify-content:space-between;padding:20px 6vw;max-width:1300px;margin:0 auto}
+  .lp-nav .brand b{font-size:20px}
+  .lp-actions{display:flex;align-items:center;gap:12px}
+  .lp-hero{max-width:1000px;margin:0 auto;padding:60px 6vw 90px;text-align:center}
+  .pill-ai{display:inline-flex;align-items:center;gap:8px;background:var(--blue-soft);color:var(--blue-2);font-weight:600;font-size:13px;padding:8px 16px;border-radius:20px;margin-bottom:26px}
+  .lp-hero h1{font-size:56px;line-height:1.05;letter-spacing:-1.5px;font-weight:800}
+  .lp-hero h1 .g{background:linear-gradient(90deg,var(--blue-3),var(--blue));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lp-hero p{color:var(--muted);font-size:18px;max-width:620px;margin:22px auto 34px;line-height:1.6}
+  .lp-cta{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+  .lp-feats{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;max-width:1000px;margin:10px auto 80px;padding:0 6vw}
+  .feat{background:#fff;border:1px solid var(--line);border-radius:16px;padding:24px;text-align:left;box-shadow:var(--shadow)}
+  .feat .fic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:20px;margin-bottom:14px}
+  .feat h4{font-size:16px;margin-bottom:6px}
+  .feat p{color:var(--muted);font-size:13px;line-height:1.55}
+
+  /* ---------- AUTH ---------- */
+  .auth{min-height:100vh;display:grid;grid-template-columns:1.05fr 1fr}
+  .auth-art{background:
+     radial-gradient(700px 400px at 30% 20%,#2a4bd0 0,transparent 60%),
+     linear-gradient(160deg,#0c1738,#16265f 60%,#1e40af);color:#fff;padding:56px 5vw;display:flex;flex-direction:column;justify-content:center}
+  .auth-art .brand b{color:#fff}
+  .auth-art h2{font-size:34px;letter-spacing:-.5px;margin:28px 0 14px;line-height:1.15}
+  .auth-art p{color:#b9c5ee;font-size:15px;line-height:1.6;max-width:420px}
+  .auth-art .mini{display:flex;gap:10px;align-items:center;margin-top:16px;color:#cdd7f5;font-size:13.5px}
+  .auth-form{display:flex;align-items:center;justify-content:center;padding:40px 5vw;background:#fff}
+  .auth-box{width:100%;max-width:390px}
+  .auth-box h3{font-size:23px;margin-bottom:4px}
+  .auth-box .sub{color:var(--muted);font-size:13.5px;margin-bottom:22px}
+  .roletabs{display:flex;gap:8px;margin-bottom:18px}
+  .roletabs button{flex:1;border:1px solid var(--line);background:#fff;border-radius:11px;padding:11px;font-weight:600;font-size:13px;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px}
+  .roletabs button.on{border-color:var(--blue);background:var(--blue);color:#fff}
+  .roletabs button.on.dark{background:var(--navy);border-color:var(--navy)}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:12.5px;font-weight:600;margin-bottom:6px;color:#42506e}
+  .field .inp{display:flex;align-items:center;gap:9px;border:1px solid var(--line);border-radius:11px;padding:11px 13px;background:#fff}
+  .field .inp input{border:0;outline:0;flex:1;font-size:14px;color:var(--ink);background:transparent}
+  .field .inp .ic{color:var(--muted-2);font-size:14px}
+  .row-between{display:flex;justify-content:space-between;align-items:center;margin:4px 0 18px}
+  .link{color:var(--blue-2);font-size:12.5px;font-weight:600;cursor:pointer;background:none;border:0;padding:0}
+  .divider{display:flex;align-items:center;gap:12px;color:var(--muted-2);font-size:12px;margin:20px 0}
+  .divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--line)}
+  .oauth{display:flex;gap:10px}
+  .oauth button{flex:1;border:1px solid var(--line);background:#fff;border-radius:11px;padding:11px;font-weight:600;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+  .auth-foot{text-align:center;margin-top:20px;font-size:13px;color:var(--muted)}
+
+  /* ---------- APP SHELL ---------- */
+  .app{display:flex;min-height:100vh}
+  .side{width:236px;background:var(--navy);color:#c7d0ea;display:flex;flex-direction:column;padding:20px 14px;position:sticky;top:0;height:100vh;flex-shrink:0}
+  .brand{display:flex;align-items:center;gap:10px}
+  .brand .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--blue-3),var(--blue));display:grid;place-items:center;color:#fff;font-weight:800;font-size:19px;cursor:pointer}
+  .brand b{color:var(--ink);font-size:18px;letter-spacing:.5px}
+  .side .brand b{color:#fff}
+  .side .brand small{display:block;color:#7f8dbf;font-size:8px;letter-spacing:2px;margin-top:2px}
+  .nav{margin-top:22px;display:flex;flex-direction:column;gap:3px;overflow:auto}
+  .nav a{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:10px;color:#b9c2e2;text-decoration:none;font-size:13.5px;cursor:pointer}
+  .nav a .ic{width:17px;text-align:center;opacity:.85;font-size:14px}
+  .nav a:hover{background:rgba(255,255,255,.06)}
+  .nav a.active{background:var(--blue);color:#fff;font-weight:600}
+  .side-foot{margin-top:auto;padding-top:12px;border-top:1px solid var(--navy-line)}
+  .side-foot a{color:#b9c2e2;padding:9px 11px;display:flex;gap:11px;align-items:center;font-size:13.5px;cursor:pointer}
+
+  .main{flex:1;min-width:0;display:flex;flex-direction:column}
+  .top{height:62px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:16px;padding:0 26px;position:sticky;top:0;z-index:5}
+  .search{flex:1;max-width:340px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 13px;color:var(--muted);font-size:13px}
+  .top .spacer{flex:1}
+  .vezus-pill{display:flex;align-items:center;gap:7px;background:var(--orange-bg);color:#a55a00;font-weight:700;font-size:13px;padding:7px 13px;border-radius:20px}
+  .vezus-pill .v{width:18px;height:18px;border-radius:6px;background:var(--orange);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:800}
+  .who{display:flex;align-items:center;gap:9px}
+  .who .av{width:34px;height:34px;border-radius:50%;background:var(--blue-3);color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px}
+  .who small{display:block;color:var(--muted);font-size:11px}
+  .who b{font-size:13px}
+
+  .wrap{padding:26px 30px 60px;max-width:1160px}
+  .page-h{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+  .page-h h1{font-size:24px;letter-spacing:-.4px}
+  .page-h p{color:var(--muted);font-size:13.5px;margin-top:5px}
+
+  .grid{display:grid;gap:16px}
+  .kpis{grid-template-columns:repeat(4,1fr)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .card .pad{padding:18px 20px}
+  .kpi{padding:17px 18px}
+  .kpi .ico{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-size:17px;margin-bottom:12px}
+  .kpi .num{font-size:27px;font-weight:800;letter-spacing:-.5px}
+  .kpi .lab{color:var(--muted);font-size:12.5px;margin-top:2px}
+  .kpi .delta{font-size:11.5px;font-weight:700;margin-top:7px;display:inline-flex;gap:4px;align-items:center}
+  .up{color:var(--green)} .down{color:var(--red)}
+  .i-blue{background:var(--blue-soft);color:var(--blue-2)}
+  .i-purple{background:#f0e9ff;color:var(--purple)}
+  .i-pink{background:#ffe6f1;color:var(--pink)}
+  .i-green{background:var(--green-bg);color:var(--green)}
+  .i-orange{background:var(--orange-bg);color:var(--orange-2)}
+
+  .cols{display:grid;gap:16px;grid-template-columns:1fr 340px}
+  .sec-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .sec-h h3{font-size:16px}
+  .muted{color:var(--muted);font-size:12.5px}
+  .stack{display:flex;flex-direction:column;gap:16px}
+
+  .ring-wrap{display:flex;align-items:center;gap:16px}
+  .ring{--p:92;--c:var(--green);width:92px;height:92px;border-radius:50%;background:conic-gradient(var(--c) calc(var(--p)*1%),#eef1f7 0);display:grid;place-items:center;flex-shrink:0}
+  .ring .hole{width:70px;height:70px;background:#fff;border-radius:50%;display:grid;place-items:center;text-align:center}
+  .ring .hole b{font-size:21px;display:block} .ring .hole span{font-size:9px;color:var(--muted)}
+
+  .prow{margin:11px 0}
+  .prow .t{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px}
+  .bar{height:8px;border-radius:6px;background:#eef1f7;overflow:hidden}
+  .bar>i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,var(--blue-3),var(--blue-2))}
+
+  .match-card{border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px}
+  .match-top{display:flex;align-items:center;gap:12px}
+  .avatar{width:44px;height:44px;border-radius:12px;background:var(--blue-soft);color:var(--blue-2);display:grid;place-items:center;font-weight:700;flex-shrink:0}
+  .avatar.blur{filter:blur(4px)}
+  .match-top .info{flex:1;min-width:0}
+  .match-top .info b{font-size:14.5px}
+  .match-top .info .sub{color:var(--muted);font-size:12px;margin-top:2px}
+  .match-badge{text-align:center}
+  .match-badge b{color:var(--green);font-size:18px;display:block;line-height:1}
+  .match-badge span{font-size:9px;color:var(--muted);letter-spacing:1px}
+  .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .tag{font-size:11px;background:var(--bg);border:1px solid var(--line);color:#42506e;padding:4px 9px;border-radius:7px}
+  .why{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);display:none}
+  .why.open{display:block}
+  .why .dim{display:grid;grid-template-columns:110px 1fr 42px;align-items:center;gap:10px;margin:7px 0;font-size:12px}
+  .why .dim .mini{height:7px;background:#eef1f7;border-radius:5px;overflow:hidden}
+  .why .dim .mini>i{display:block;height:100%;border-radius:5px}
+  .why .dim b{text-align:right;font-variant-numeric:tabular-nums}
+  .whylink{color:var(--blue-2);font-size:12px;font-weight:600;cursor:pointer;background:none;border:0;padding:0;margin-top:10px}
+  .unlock{display:flex;gap:8px;margin-top:12px}
+
+  .ach{display:flex;gap:11px;align-items:center;padding:12px;border-radius:12px;background:linear-gradient(135deg,var(--navy),#182a63);color:#fff;margin-bottom:9px}
+  .ach .em{width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.12);display:grid;place-items:center;font-size:17px}
+  .ach b{font-size:13px} .ach small{display:block;color:#aeb9e0;font-size:11px;margin-top:1px}
+  .step{display:flex;gap:11px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+  .step:last-child{border-bottom:0}
+  .step .dot{width:22px;height:22px;border-radius:50%;border:2px solid var(--blue-3);color:var(--blue-2);display:grid;place-items:center;font-size:11px;flex-shrink:0}
+  .step .dot.done{background:var(--green);border-color:var(--green);color:#fff}
+  .step .g{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--green)}
+  .step small{color:var(--muted);font-size:11px;display:block}
+
+  .funnel{display:flex;gap:8px;margin-top:6px}
+  .fstep{flex:1;text-align:center;padding:14px 6px;border-radius:12px;color:#fff}
+  .fstep b{font-size:22px;display:block} .fstep span{font-size:11px;opacity:.9} .fstep small{font-size:10px;opacity:.75;display:block;margin-top:3px}
+
+  .feed-item{display:flex;gap:11px;padding:10px 0;border-bottom:1px solid var(--line)}
+  .feed-item:last-child{border-bottom:0}
+  .feed-item .fi{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;font-size:14px;flex-shrink:0}
+  .feed-item p{font-size:12.5px} .feed-item small{color:var(--muted);font-size:11px}
+  .roi{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:6px}
+  .roi div{background:var(--bg);border-radius:12px;padding:13px}
+  .roi b{font-size:20px} .roi span{font-size:11px;color:var(--muted);display:block}
+
+  .note{background:#fff8ea;border:1px solid #f3e2b8;color:#7a5a12;border-radius:10px;padding:9px 13px;font-size:12px;margin-bottom:16px}
+
+  /* generic list/profile pieces */
+  .listcard{border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px;display:flex;gap:14px;align-items:flex-start}
+  .listcard .li{width:40px;height:40px;border-radius:11px;background:var(--blue-soft);color:var(--blue-2);display:grid;place-items:center;flex-shrink:0}
+  .listcard h4{font-size:14.5px} .listcard .meta{color:var(--muted);font-size:12px;margin:2px 0 8px}
+  .listcard ul{margin-left:16px;color:#42506e;font-size:12.5px;line-height:1.7}
+  .actions{margin-left:auto;display:flex;gap:8px;flex-shrink:0}
+  .icobtn{width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--muted);cursor:pointer}
+  .formgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .formgrid .full{grid-column:1/-1}
+  .lbl{font-size:12.5px;font-weight:600;color:#42506e;margin-bottom:6px;display:block}
+  .inp2{border:1px solid var(--line);border-radius:11px;padding:11px 13px;font-size:13.5px;color:var(--ink);width:100%;background:#fff}
+  textarea.inp2{min-height:90px;resize:vertical;font-family:inherit}
+  .skillbar{display:grid;grid-template-columns:120px 1fr 44px;gap:12px;align-items:center;margin:12px 0;font-size:13px}
+  .toggle{width:42px;height:24px;border-radius:20px;background:var(--blue-2);position:relative;flex-shrink:0}
+  .toggle::after{content:"";position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:3px;right:3px}
+  .toggle.off{background:#cdd3e0} .toggle.off::after{right:auto;left:3px}
+  .settingrow{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--line)}
+  .settingrow:last-child{border-bottom:0}
+  .price{border:1px solid var(--line);border-radius:14px;padding:18px;text-align:center;position:relative}
+  .price.pop{border-color:var(--blue-2);box-shadow:0 0 0 3px var(--blue-soft)}
+  .price .pt{font-size:12px;color:var(--muted)} .price .pv{font-size:24px;font-weight:800;margin:4px 0}
+  .price .pp{color:var(--orange-2);font-weight:700;margin-bottom:12px}
+  .badge-pop{position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:var(--blue-2);color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .chip{border:1px solid var(--line);background:#fff;border-radius:20px;padding:7px 14px;font-size:12.5px;color:#42506e;cursor:pointer}
+  .chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .chat{display:grid;grid-template-columns:260px 1fr;height:520px}
+  .chat .list{border-right:1px solid var(--line);overflow:auto}
+  .chat .li2{padding:14px;border-bottom:1px solid var(--line);cursor:pointer}
+  .chat .li2.on{background:var(--blue-soft)}
+  .chat .li2 b{font-size:13px} .chat .li2 small{color:var(--muted);font-size:11.5px;display:block;margin-top:3px}
+  .chat .thread{display:flex;flex-direction:column}
+  .chat .thead{padding:14px 18px;border-bottom:1px solid var(--line);font-weight:600;font-size:14px}
+  .chat .body{flex:1;padding:18px;background:var(--bg);overflow:auto;display:flex;flex-direction:column;gap:10px}
+  .bubble{max-width:70%;padding:10px 14px;border-radius:14px;font-size:13px;line-height:1.5}
+  .bubble.them{background:#fff;border:1px solid var(--line);align-self:flex-start;border-bottom-left-radius:4px}
+  .bubble.me{background:var(--blue);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+  .chat .compose{padding:14px 18px;border-top:1px solid var(--line);display:flex;gap:10px}
+  .verified{display:inline-flex;align-items:center;gap:4px;color:var(--green);font-size:11px;font-weight:700;background:var(--green-bg);padding:3px 8px;border-radius:20px}
+  .statuspill{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px}
+  .st-ativa{background:var(--green-bg);color:var(--green)} .st-pausada{background:#fff2df;color:#a55a00}
+
+  @media(max-width:1000px){.cols{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}.side{display:none}
+    .auth{grid-template-columns:1fr}.auth-art{display:none}.lp-feats{grid-template-columns:1fr}.lp-hero h1{font-size:38px}.formgrid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- ================= LANDING ================= -->
+<div id="scr-landing" class="lp">
+  <div class="lp-nav">
+    <div class="brand"><div class="logo">V</div><div><b>VEZULO</b></div></div>
+    <div class="lp-actions">
+      <button class="link" style="font-size:14px" onclick="go('login')">Fazer Login</button>
+      <button class="btn dark" onclick="go('signup')">Criar Conta Grátis</button>
+    </div>
+  </div>
+  <div class="lp-hero">
+    <div class="pill-ai">✦ Recrutamento impulsionado por Inteligência Artificial</div>
+    <h1>Conexões <span class="g">Inteligentes</span><br>entre empresas e talentos.</h1>
+    <p>Nossa IA analisa milhares de dados para entregar o match perfeito. Contrate mais rápido ou encontre o emprego dos seus sonhos com a Vezulo.</p>
+    <div class="lp-cta">
+      <button class="btn dark lg" onclick="signupAs('E')">🏢 Sou uma Empresa →</button>
+      <button class="btn ghost lg" onclick="signupAs('C')">👤 Sou um Candidato</button>
+    </div>
+  </div>
+  <div class="lp-feats">
+    <div class="feat"><div class="fic i-blue">◈</div><h4>Match IA explicável</h4><p>Veja o porquê de cada compatibilidade — skills, senioridade, local e salário — nos dois lados.</p></div>
+    <div class="feat"><div class="fic i-green">▲</div><h4>Perfil que se destaca</h4><p>Índice de completude, conquistas e ranking por área para o candidato ser mais procurado.</p></div>
+    <div class="feat"><div class="fic i-orange">⚡</div><h4>Economia de Vezus</h4><p>Empresas desbloqueiam só os perfis certos e acompanham o ROI real de cada contratação.</p></div>
+  </div>
+</div>
+
+<!-- ================= LOGIN ================= -->
+<div id="scr-login" class="auth hidden">
+  <div class="auth-art">
+    <div class="brand"><div class="logo">V</div><div><b>VEZULO</b></div></div>
+    <h2>Conexões inteligentes<br>entre empresas e talentos.</h2>
+    <p>Entre na sua conta para acessar seu painel de métricas, matches por IA e mensagens.</p>
+    <div class="mini">✓ Match explicável &nbsp;·&nbsp; ✓ Perfis verificados &nbsp;·&nbsp; ✓ ROI transparente</div>
+  </div>
+  <div class="auth-form">
+    <div class="auth-box">
+      <h3>Bem-vindo de volta</h3>
+      <div class="sub">Acesse sua conta Vezulo</div>
+      <div class="roletabs" id="loginTabs">
+        <button class="on" data-r="C" onclick="pickLogin('C')">👤 Candidato</button>
+        <button data-r="E" onclick="pickLogin('E')">🏢 Empresa</button>
+        <button data-r="A" onclick="pickLogin('A')">🔒 Admin</button>
+      </div>
+      <div class="field"><label>Email</label><div class="inp"><span class="ic">✉</span><input type="email" placeholder="voce@email.com" value="joao.silva@email.com"></div></div>
+      <div class="field"><label>Senha</label><div class="inp"><span class="ic">🔒</span><input type="password" placeholder="••••••••" value="123456"></div></div>
+      <div class="row-between"><span></span><button class="link" onclick="alertMsg('Fluxo “Esqueci minha senha” — protótipo')">Esqueci minha senha</button></div>
+      <button class="btn primary block lg" onclick="doLogin()">Entrar</button>
+      <div id="adminNote" class="note hidden" style="margin-top:14px">🔒 Painel administrativo — em desenvolvimento (Fase 3).</div>
+      <div class="divider">ou continue com</div>
+      <div class="oauth">
+        <button onclick="alertMsg('OAuth Google — protótipo')"><span style="color:#ea4335;font-weight:800">G</span> Google</button>
+        <button onclick="alertMsg('OAuth LinkedIn — protótipo')"><span style="color:#0a66c2;font-weight:800">in</span> LinkedIn</button>
+      </div>
+      <div class="auth-foot">Não tem conta? <button class="link" onclick="go('signup')">Criar conta grátis</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= CADASTRO ================= -->
+<div id="scr-signup" class="auth hidden">
+  <div class="auth-art">
+    <div class="brand"><div class="logo">V</div><div><b>VEZULO</b></div></div>
+    <h2>Comece grátis<br>em menos de 2 minutos.</h2>
+    <p>Crie seu perfil, deixe a IA trabalhar e receba matches com o porquê de cada um.</p>
+    <div class="mini">✓ Sem cartão de crédito &nbsp;·&nbsp; ✓ Perfil verificado</div>
+  </div>
+  <div class="auth-form">
+    <div class="auth-box">
+      <h3>Criar conta</h3>
+      <div class="sub">Escolha o tipo de conta</div>
+      <div class="roletabs" id="signupTabs">
+        <button class="on" data-r="C" onclick="pickSignup('C')">👤 Candidato</button>
+        <button data-r="E" onclick="pickSignup('E')">🏢 Empresa</button>
+      </div>
+      <div id="signupFields"></div>
+      <label style="display:flex;gap:8px;font-size:12px;color:var(--muted);margin:4px 0 16px;align-items:flex-start">
+        <input type="checkbox" checked style="margin-top:2px"> Aceito os Termos de Uso e a Política de Privacidade.</label>
+      <button class="btn primary block lg" onclick="doSignup()">Criar Conta Grátis</button>
+      <div class="auth-foot">Já tem conta? <button class="link" onclick="go('login')">Fazer login</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= APP ================= -->
+<div id="scr-app" class="app hidden">
+  <aside class="side">
+    <div class="brand" style="padding:6px 8px 2px"><div class="logo" onclick="go('landing')" title="Voltar à landing">V</div><div><b>VEZULO</b><small>CONEXÕES INTELIGENTES</small></div></div>
+    <nav class="nav" id="sideNav"></nav>
+    <div class="side-foot"><a onclick="logout()"><span class="ic">⇥</span>Sair da conta</a></div>
+  </aside>
+  <div class="main">
+    <div class="top">
+      <div class="search">🔍 Pesquisa global…</div>
+      <div class="spacer"></div>
+      <div id="vezusPill" class="vezus-pill hidden"><span class="v">V</span> 145 Vezus</div>
+      <div class="who"><div class="av" id="avatarTop">J</div><div><b id="whoName">João Silva</b><small id="whoRole">Candidato</small></div></div>
+    </div>
+    <div id="pageContent"></div>
+  </div>
+</div>
+
+<script>
+/* ============ STATE + ROUTER ============ */
+var state={screen:'landing', role:'C', page:'dashboard', loginRole:'C', signupRole:'C'};
+
+function go(scr){
+  state.screen=scr;
+  ['landing','login','signup','app'].forEach(function(s){
+    document.getElementById('scr-'+s).classList.toggle('hidden', s!==scr);
+  });
+  if(scr==='signup') renderSignupFields();
+  window.scrollTo(0,0);
+}
+function alertMsg(m){ var n=document.createElement('div'); n.textContent=m;
+  n.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#0f1e46;color:#fff;padding:12px 18px;border-radius:12px;font-size:13px;z-index:99;box-shadow:0 10px 30px rgba(0,0,0,.25)';
+  document.body.appendChild(n); setTimeout(function(){n.remove();},1900); }
+
+/* ---- login ---- */
+function pickLogin(r){ state.loginRole=r;
+  document.querySelectorAll('#loginTabs button').forEach(function(b){b.classList.toggle('on',b.dataset.r===r); b.classList.toggle('dark',r==='A'&&b.dataset.r==='A');});
+  document.getElementById('adminNote').classList.toggle('hidden', r!=='A');
+}
+function doLogin(){ if(state.loginRole==='A'){ alertMsg('Painel admin em desenvolvimento (Fase 3).'); return; } enterApp(state.loginRole); }
+
+/* ---- signup ---- */
+function signupAs(r){ state.signupRole=r; go('signup'); pickSignup(r); }
+function pickSignup(r){ state.signupRole=r;
+  document.querySelectorAll('#signupTabs button').forEach(function(b){b.classList.toggle('on',b.dataset.r===r);});
+  renderSignupFields();
+}
+function renderSignupFields(){
+  var r=state.signupRole, h='';
+  if(r==='C'){
+    h='<div class="field"><label>Nome completo</label><div class="inp"><span class="ic">👤</span><input placeholder="Seu nome"></div></div>'
+     +'<div class="field"><label>Email</label><div class="inp"><span class="ic">✉</span><input placeholder="voce@email.com"></div></div>'
+     +'<div class="field"><label>Telefone</label><div class="inp"><span class="ic">📱</span><input placeholder="(11) 90000-0000"></div></div>'
+     +'<div class="field"><label>Senha</label><div class="inp"><span class="ic">🔒</span><input type="password" placeholder="••••••••"></div></div>';
+  } else {
+    h='<div class="field"><label>Razão social</label><div class="inp"><span class="ic">🏢</span><input placeholder="Sua empresa Ltda"></div></div>'
+     +'<div class="field"><label>CNPJ</label><div class="inp"><span class="ic">🆔</span><input placeholder="00.000.000/0001-00"></div></div>'
+     +'<div class="field"><label>Email corporativo</label><div class="inp"><span class="ic">✉</span><input placeholder="rh@empresa.com.br"></div></div>'
+     +'<div class="field"><label>Senha</label><div class="inp"><span class="ic">🔒</span><input type="password" placeholder="••••••••"></div></div>';
+  }
+  document.getElementById('signupFields').innerHTML=h;
+}
+function doSignup(){ enterApp(state.signupRole); }
+
+/* ---- app ---- */
+function enterApp(role){
+  state.role=role; state.page='dashboard';
+  document.getElementById('vezusPill').classList.toggle('hidden', role!=='E');
+  var av=document.getElementById('avatarTop');
+  av.textContent = role==='E'?'T':'J';
+  av.style.borderRadius = role==='E'?'11px':'50%';
+  document.getElementById('whoName').textContent = role==='E'?'TechCorp Brasil':'João Silva';
+  document.getElementById('whoRole').textContent = role==='E'?'Empresa':'Candidato';
+  buildNav(); renderPage(); go('app');
+}
+function logout(){ go('landing'); }
+
+var NAV_C=[['dashboard','▦','Dashboard'],['perfil','◎','Meu Perfil'],['curriculo','▤','Meu Currículo'],['experiencias','⬒','Experiências'],['formacao','◑','Formação'],['habilidades','◈','Habilidades'],['vagas','✦','Vagas Recomendadas'],['empresas','▣','Empresas Interessadas'],['mensagens','✎','Mensagens'],['certificados','❏','Certificados'],['config','⚙','Configurações']];
+var NAV_E=[['dashboard','▦','Dashboard'],['buscar','⌕','Buscar Talentos'],['vagas','⬒','Vagas'],['match','◈','Match Inteligente'],['favoritos','★','Candidatos Favoritos'],['banco','❏','Banco de Currículos'],['mensagens','✎','Mensagens'],['financeiro','$','Financeiro'],['perfil','◎','Meu Perfil'],['config','⚙','Configurações']];
+
+function buildNav(){
+  var nav=state.role==='E'?NAV_E:NAV_C, h='';
+  nav.forEach(function(it){ h+='<a class="'+(it[0]===state.page?'active':'')+'" onclick="navTo(\''+it[0]+'\')"><span class="ic">'+it[1]+'</span>'+it[2]+'</a>'; });
+  document.getElementById('sideNav').innerHTML=h;
+}
+function navTo(p){ state.page=p; buildNav(); renderPage(); document.querySelector('.main').scrollTo(0,0); window.scrollTo(0,0); }
+function toggleWhy(btn){ var w=btn.nextElementSibling; w.classList.toggle('open');
+  btn.innerHTML = btn.innerHTML.indexOf('▾')>-1 ? btn.innerHTML.replace('▾','▴') : btn.innerHTML.replace('▴','▾'); }
+
+function renderPage(){
+  var fn = (state.role==='E'?PAGES_E:PAGES_C)[state.page];
+  document.getElementById('pageContent').innerHTML = fn ? fn() : '<div class="wrap"><div class="card"><div class="pad">Página em construção.</div></div></div>';
+  if(state.page==='dashboard') drawCharts();
+}
+</script>
+
+<script>
+/* ============ PAGE TEMPLATES ============ */
+function kpi(cls,ic,num,lab,delta){return '<div class="card kpi"><div class="ico '+cls+'">'+ic+'</div><div class="num">'+num+'</div><div class="lab">'+lab+'</div>'+(delta?'<div class="delta '+delta[0]+'">'+delta[1]+'</div>':'')+'</div>';}
+function whyBlock(dims){var h='<button class="whylink" onclick="toggleWhy(this)">Por que esse match? ▾</button><div class="why">';
+  dims.forEach(function(d){var col=d[1]>=90?'var(--green)':'var(--blue-3)';h+='<div class="dim"><span>'+d[0]+'</span><div class="mini"><i style="width:'+d[1]+'%;background:'+col+'"></i></div><b>'+d[1]+'%</b></div>';});
+  return h+'</div>';}
+
+var PAGES_C={
+ dashboard:function(){return '<div class="wrap">'
+  +'<div class="page-h"><div><h1>Bem-vindo, João! 👋</h1><p>Seu perfil está em alta esta semana. Continue assim.</p></div>'
+  +'<div style="display:flex;gap:10px"><button class="btn ghost" onclick="navTo(\'perfil\')">✦ Melhorar com IA</button><button class="btn dark" onclick="navTo(\'vagas\')">Ver Vagas Recomendadas</button></div></div>'
+  +'<div class="note">ℹ️ Os números derivam dos motores de métricas (eventos, match, completude). Clique em “Por que esse match?”.</div>'
+  +'<div class="grid kpis">'
+   +kpi('i-blue','◎','209','Visualizações',['up','▲ 18% vs. semana anterior'])
+   +kpi('i-purple','▣','14','Empresas interessadas',['up','▲ 3 novas'])
+   +kpi('i-pink','◈','8','Matches realizados',['','≥ 80% de compatibilidade'])
+   +kpi('i-green','▲','92%','Perfil completo',['up','faltam 2 itens'])
+  +'</div>'
+  +'<div class="cols" style="margin-top:16px"><div class="stack">'
+   +'<div class="card"><div class="pad"><div class="sec-h"><h3>Evolução do Perfil</h3><span class="muted">Visualizações · últimos 7 dias</span></div><div id="lineChart"></div></div></div>'
+   +'<div class="card"><div class="pad"><div class="sec-h"><h3>Suas melhores recomendações</h3><span class="muted">Match IA explicável</span></div>'
+     +matchC('DT','Desenvolvedor Frontend Sênior','TechCorp Brasil · Remoto · R$ 12–15 mil','95',['React','TypeScript','Node.js','Remoto ✓'],[['Hard skills',96],['Senioridade',90],['Localização',100],['Salário',85]],'Candidatar-se')
+     +matchC('IH','Engenheiro de Software Frontend','Inova Health · São Paulo, SP · R$ 10 mil','89',['React','TypeScript','Presencial'],[['Hard skills',92],['Senioridade',88],['Localização',78],['Salário',80]],'Candidatar-se')
+   +'</div></div>'
+  +'</div><div class="stack">'
+   +'<div class="card"><div class="pad"><h3 style="margin-bottom:14px">Perfil Completo</h3><div class="ring-wrap"><div class="ring" style="--p:92"><div class="hole"><b>92%</b><span>completo</span></div></div><div class="muted">Perfis 100% completos recebem <b style="color:var(--ink)">3× mais</b> visualizações.</div></div></div></div>'
+   +'<div class="card"><div class="pad"><h3 style="margin-bottom:12px">Conquistas</h3>'
+     +'<div class="ach"><div class="em">🔥</div><div><b>Mais Procurado</b><small>Top 5% na sua área (30 dias)</small></div></div>'
+     +'<div class="ach"><div class="em">🏆</div><div><b>Perfil Completo</b><small>Quase lá — 92%</small></div></div>'
+     +'<div class="ach" style="background:linear-gradient(135deg,#1b8a4a,#12703c)"><div class="em">📈</div><div><b>Em Alta</b><small>+18% de views esta semana</small></div></div></div></div>'
+   +'<div class="card"><div class="pad"><h3 style="margin-bottom:6px">Próximos Passos</h3><p class="muted" style="margin-bottom:6px">Ordenado pelo ganho de completude</p>'
+     +'<div class="step"><div class="dot">1</div><div><b style="font-size:13px">Fazer teste de skills</b><small>Valida seu nível de React/TS</small></div><span class="g">+10%</span></div>'
+     +'<div class="step"><div class="dot">2</div><div><b style="font-size:13px">Adicionar portfólio</b><small>Link do GitHub ou site</small></div><span class="g">+5%</span></div>'
+     +'<div class="step"><div class="dot done">✓</div><div><b style="font-size:13px">Experiência adicionada</b><small>2 registros</small></div><span class="g" style="color:var(--muted)">feito</span></div></div></div>'
+  +'</div></div></div>';},
+
+ perfil:function(){return page('Meu Perfil','Gerencie suas informações pessoais e profissionais.','<button class="btn primary">Salvar Alterações</button>',
+  '<div class="card"><div class="pad">'
+  +'<div style="display:flex;gap:16px;align-items:center;margin-bottom:22px"><div class="avatar" style="width:64px;height:64px;font-size:20px">JS</div><button class="btn ghost">Alterar Foto</button></div>'
+  +'<div class="formgrid">'
+   +fld('Nome Completo','João Silva')+fld('Cargo Desejado','Desenvolvedor Frontend Sênior')
+   +fld('Email','joao.silva@email.com')+fld('Telefone','(11) 98765-4321')
+   +fld('Cidade / Estado','São Paulo, SP')+fld('LinkedIn','linkedin.com/in/joaosilva')
+   +'<div class="full"><label class="lbl">Resumo Profissional</label><textarea class="inp2">Profissional com mais de 5 anos de experiência na criação de interfaces web modernas e escaláveis. Especialista em React e ecossistema JavaScript, focado em performance, acessibilidade e experiência do usuário.</textarea></div>'
+  +'</div></div></div>');},
+
+ curriculo:function(){return page('Meu Currículo','Visualize como as empresas veem seu perfil.','<div style="display:flex;gap:10px"><button class="btn ghost">⬇ Baixar PDF</button><button class="btn dark">✦ Gerar currículo com IA</button></div>',
+  '<div class="card"><div style="background:var(--navy);color:#fff;padding:26px;border-radius:16px 16px 0 0"><h2 style="font-size:22px">João Silva</h2><div style="color:#8fa0d8;font-weight:600;margin:4px 0 10px">Desenvolvedor Frontend Sênior</div><p style="color:#c7d0ea;font-size:13px;max-width:640px;line-height:1.6">Profissional com mais de 5 anos de experiência na criação de interfaces web modernas e escaláveis. Especialista em React e ecossistema JavaScript.</p><div style="color:#aeb9e0;font-size:12px;margin-top:12px">◎ São Paulo, SP · ✉ joao.silva@email.com · 📱 (11) 98765-4321</div></div>'
+  +'<div class="pad"><h3 style="margin-bottom:6px">Habilidades</h3><div class="muted" style="margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;font-size:11px">Hard Skills</div>'
+   +skill('React / Next.js',95)+skill('TypeScript',90)+skill('Tailwind CSS',85)+skill('Node.js',75)
+   +'<div class="muted" style="margin:16px 0 10px;text-transform:uppercase;letter-spacing:1px;font-size:11px">Soft Skills</div><div class="tags">'+['Liderança técnica','Comunicação assertiva','Resolução de problemas','Trabalho em equipe','Mentoria','Metodologias Ágeis'].map(function(s){return '<span class="tag">'+s+'</span>';}).join('')+'</div>'
+  +'</div></div>');},
+
+ experiencias:function(){return page('Experiências','Adicione seu histórico profissional para destacar seu perfil.','<button class="btn dark">+ Adicionar</button>',
+   exp('Desenvolvedor Frontend Sênior','TechCorp Brasil','Jan 2021 – Presente · 5 anos 5 meses',['Liderou a migração do sistema legado para React e Next.js.','Reduziu o tempo de carregamento da aplicação em 40%.','Mentoria para 3 desenvolvedores juniores.'])
+  +exp('Desenvolvedor Pleno','Agência WebBR','Fev 2018 – Dez 2020 · 2 anos 11 meses',['Desenvolvimento de landing pages de alta conversão.','Integração com APIs RESTful e GraphQL.']));},
+
+ formacao:function(){return page('Formação','Sua trajetória acadêmica e cursos realizados.','<button class="btn dark">+ Adicionar</button>',
+   exp('Engenharia de Software','Universidade Tecnológica Federal do Paraná (UTFPR)','Graduação · Concluído em 2018',[]));},
+
+ habilidades:function(){return page('Habilidades','Adicione e avalie suas competências técnicas e comportamentais.','',
+  '<div class="cols"><div class="card"><div class="pad"><h3 style="margin-bottom:6px">Hard Skills</h3><div class="field" style="margin:10px 0"><div class="inp"><input placeholder="Adicionar nova habilidade (ex: React, Python)…"></div></div>'
+   +skill('React / Next.js',95)+skill('TypeScript',90)+skill('Tailwind CSS',85)+skill('Node.js',75)+'</div></div>'
+  +'<div class="card"><div class="pad"><h3 style="margin-bottom:6px">Soft Skills</h3><div class="field" style="margin:10px 0"><div class="inp"><input placeholder="Adicionar soft skill…"></div></div><div class="tags">'
+   +['Liderança técnica ×','Comunicação assertiva ×','Resolução de problemas ×','Trabalho em equipe ×','Mentoria ×'].map(function(s){return '<span class="tag">'+s+'</span>';}).join('')+'</div></div></div></div>');},
+
+ vagas:function(){return page('Vagas Recomendadas','Vagas selecionadas pela nossa IA com base no seu perfil.','',
+   '<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(320px,1fr))">'
+   +vagaCard('Desenvolvedor Frontend Sênior','TechCorp Brasil','◎ Remoto · $ R$ 12.000 – 15.000','95',[['Hard skills',96],['Senioridade',90],['Localização',100],['Salário',85]])
+   +vagaCard('Engenheiro de Software Frontend','Inova Health','◎ São Paulo, SP · $ R$ 10.000','89',[['Hard skills',92],['Senioridade',88],['Localização',78],['Salário',80]])
+   +vagaCard('Especialista React','Global Logistics','◎ Híbrido · $ A combinar','82',[['Hard skills',90],['Senioridade',80],['Localização',72],['Salário',70]])
+   +'</div>');},
+
+ empresas:function(){return page('Empresas Interessadas','Empresas que visualizaram seu perfil recentemente.','',
+   intCard('TC','TechCorp Brasil','◎ São Paulo, SP','Visualizou seu perfil hoje')
+  +intCard('IH','Inova Health','◎ Curitiba, PR','Visualizou seu perfil ontem')
+  +intCard('ES','EduSmart Solutions','◎ Belo Horizonte, MG','Visualizou seu perfil há 3 dias'));},
+
+ mensagens:function(){return page('Mensagens','Converse com recrutadores interessados.','', chatUI('Recrutador TechCorp','TechCorp Brasil · Online',[
+    ['them','Olá João! Vimos o seu perfil e achamos que você tem fit com nossa vaga de Sênior. Tem disponibilidade para batermos um papo?'],
+    ['me','Olá! Tenho sim. Podemos agendar para amanhã à tarde?']],['Recrutador TechCorp','TechCorp Brasil','Olá João! Tudo bem?'],['RH Inova','Inova Health','Obrigado pelo seu tempo.']));},
+
+ certificados:function(){return page('Certificados','Adicione licenças e certificações relevantes.','<button class="btn dark">+ Adicionar</button>',
+  '<div class="grid" style="grid-template-columns:1fr 1fr">'
+  +cert('AWS Certified Solutions Architect','Amazon Web Services','Emitido em Jan 2024 · ID AWS-12345')
+  +cert('React Advanced Patterns','Frontend Masters','Emitido em Nov 2023 · ID FM-98765')+'</div>');},
+
+ config:function(){return page('Configurações','Gerencie preferências, privacidade e segurança.','',
+  '<div class="cols"><div class="card"><div class="pad"><h3 style="margin-bottom:6px">Privacidade do Perfil</h3>'
+   +setRow('Perfil Público','Permitir que empresas encontrem seu perfil na busca.','on')
+   +setRow('Mostrar disponibilidade','Exibir status “Disponível / Aberto a propostas”.','on')
+   +setRow('Notificações por email','Novos matches e mensagens.','off')+'</div></div>'
+  +'<div class="card"><div class="pad"><h3 style="margin-bottom:12px">Segurança</h3>'
+   +'<label class="lbl">Senha Atual</label><input class="inp2" type="password" placeholder="••••••••" style="margin-bottom:12px">'
+   +'<label class="lbl">Nova Senha</label><input class="inp2" type="password" placeholder="••••••••" style="margin-bottom:16px">'
+   +'<button class="btn dark block">Atualizar Senha</button></div></div></div>');}
+};
+
+var PAGES_E={
+ dashboard:function(){return '<div class="wrap">'
+  +'<div class="page-h"><div><h1>Olá, TechCorp Brasil 👋</h1><p>Aqui está o resumo da sua busca por talentos.</p></div>'
+  +'<div style="display:flex;gap:10px"><button class="btn orange" onclick="navTo(\'financeiro\')">✦ Comprar Vezus</button><button class="btn dark" onclick="navTo(\'buscar\')">⌕ Buscar Talentos</button></div></div>'
+  +'<div class="grid kpis">'
+   +kpi('i-orange','⚡','145','Saldo de Vezus',['','32 consumidos no mês'])
+   +kpi('i-blue','◎','3.4K','Visualizações das vagas',['up','▲ 12%'])
+   +kpi('i-purple','👥','842','Candidatos',['up','▲ 45 novos'])
+   +kpi('i-pink','◈','156','Matches da IA',['','gerados este mês'])
+  +'</div>'
+  +'<div class="cols" style="margin-top:16px"><div class="stack">'
+   +'<div class="card"><div class="pad"><div class="sec-h"><h3>Contratações por Mês</h3><span class="muted">Ritmo de crescimento do time</span></div><div id="barChart"></div></div></div>'
+   +'<div class="card"><div class="pad"><div class="sec-h"><h3>Funil da vaga · Desenvolvedor Frontend Sênior</h3><span class="statuspill st-ativa">Ativa</span></div>'
+     +'<div class="funnel"><div class="fstep" style="background:#3b82f6"><b>342</b><span>Views</span></div><div class="fstep" style="background:#2563eb"><b>45</b><span>Interessados</span></div><div class="fstep" style="background:#1e40af"><b>28</b><span>Candidaturas</span></div><div class="fstep" style="background:#16a34a"><b>12</b><span>Matches</span><small>≥ 80%</small></div><div class="fstep" style="background:#0f7a37"><b>2</b><span>Contratações</span></div></div>'
+     +'<p class="muted" style="margin-top:12px">Conversão view→candidatura <b style="color:var(--ink)">8,2%</b> · candidatura→contratação <b style="color:var(--ink)">7,1%</b></p></div></div>'
+   +'<div class="card"><div class="pad"><div class="sec-h"><h3>Buscar Talentos — Match Inteligente</h3><span class="muted">Ordenado por compatibilidade</span></div>'
+     +talentCard('CS','Carlos Santos','Farmacêutico · Curitiba, PR · 5 anos','97',['Manipulação','Atendimento','CRF Ativo','✓ Verificado','🟢 Disponível'],[['Hard skills',98],['Senioridade',95],['Localização',100],['Formação',100]],true)
+     +talentCard('GL','Gabriela Lima','Desenvolvedora React · São Paulo, SP','92',['React','Node','✓ Verificado','🟡 Aberto a propostas'],null,false)
+   +'</div></div>'
+  +'</div><div class="stack">'
+   +'<div class="card"><div class="pad"><h3 style="margin-bottom:6px">ROI dos Vezus</h3><p class="muted" style="margin-bottom:4px">O que o Indeed não mostra com clareza</p><div class="roi"><div><b>16</b><span>Vezus / contratação</span></div><div><b>12,5%</b><span>desbloqueio → contrat.</span></div><div><b>R$ 80</b><span>custo / contratação</span></div></div></div></div>'
+   +'<div class="card"><div class="pad"><h3 style="margin-bottom:6px">Saldo de Vezus</h3><div style="display:flex;align-items:center;gap:14px;margin:8px 0 4px"><div class="ring" style="--p:82;--c:var(--orange)"><div class="hole"><b>145</b><span>Vezus</span></div></div><div class="muted">Consumo mensal <b style="color:var(--ink)">32 Vezus</b>. No ritmo atual, dura <b style="color:var(--ink)">~4,5 meses</b>.</div></div><button class="btn orange block" style="margin-top:8px" onclick="navTo(\'financeiro\')">Comprar pacote Growth</button></div></div>'
+   +'<div class="card"><div class="pad"><h3 style="margin-bottom:8px">Feed de Atividades</h3>'
+     +feed('i-pink','◈','Novo match encontrado','A IA achou 3 perfis p/ Dev React · há 2h')
+     +feed('i-green','✎','Candidato respondeu','Ana Costa respondeu sua mensagem · há 5h')
+     +feed('i-blue','◎','Perfil visualizado','Sua vaga foi vista por 45 candidatos · hoje')
+     +feed('i-orange','⚡','Vezus consumidos','Você usou 3 Vezus p/ desbloquear contatos')+'</div></div>'
+  +'</div></div></div>';},
+
+ buscar:function(){return page('Buscar Talentos','Encontre os melhores profissionais para sua empresa.','',
+  '<div class="card" style="background:linear-gradient(135deg,#1e40af,#2563eb);color:#fff;margin-bottom:16px"><div class="pad"><h3 style="color:#fff">✦ Match Inteligente com IA</h3><p style="color:#cdd7f5;font-size:13px;margin:6px 0 12px">Descreva o profissional ideal e nossa IA encontrará os melhores matches no banco de talentos.</p><div style="display:flex;gap:10px"><input class="inp2" style="flex:1" placeholder="Ex: Procuro um farmacêutico em Curitiba com experiência em manipulação e atendimento…"><button class="btn orange">Buscar</button></div></div></div>'
+  +'<div class="chips"><span class="chip on">Relevância (Match IA)</span><span class="chip">Cidade: Curitiba</span><span class="chip">Profissão: Farmacêutico</span><span class="chip">Escolaridade</span><span class="chip">+ Tags</span></div>'
+  +'<p class="muted" style="margin-bottom:10px">Mostrando 5 de 124 resultados</p>'
+  +talentCard('CS','Carlos Santos','Farmacêutico · Curitiba, PR · 5 anos','97',['Manipulação','Atendimento','CRF Ativo','✓ Verificado','🟢 Disponível'],[['Hard skills',98],['Senioridade',95],['Localização',100],['Formação',100]],true)
+  +talentCard('GL','Gabriela Lima','Desenvolvedora React · São Paulo, SP','92',['React','Node','✓ Verificado','🟡 Aberto a propostas'],[['Hard skills',94],['Senioridade',89],['Localização',85],['Atividade',95]],true)
+  +talentCard('RM','Ricardo Melo','Analista de Marketing · Rio de Janeiro, RJ','88',['SEO','Growth','Mídia paga','✓ Verificado'],null,false));},
+
+ vagas:function(){return page('Gestão de Vagas','Gerencie suas vagas abertas e acompanhe os candidatos.','<button class="btn dark">+ Publicar Vaga</button>',
+  '<div class="grid kpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">'
+   +kpi('i-blue','◎','559','Total de visualizações','')+kpi('i-purple','👥','75','Candidatos interessados','')+kpi('i-pink','◈','20','Matches realizados','')+'</div>'
+  +vagaGestao('Desenvolvedor Frontend Sênior','Remoto · R$ 12.000 – 15.000','ativa',342,45,12)
+  +vagaGestao('Farmacêutico RT','Presencial · Curitiba, PR · R$ 4.500','ativa',128,18,5)
+  +vagaGestao('Analista de Marketing Pleno','Híbrido · São Paulo, SP · R$ 6.000','pausada',89,12,3));},
+
+ match:function(){return page('Match Inteligente','Utilize nossa IA para encontrar o perfil ideal instantaneamente.','',
+  '<div class="card" style="background:linear-gradient(135deg,#1e40af,#2563eb);color:#fff;margin-bottom:16px"><div class="pad" style="text-align:center;padding:34px"><div style="font-size:34px">◈</div><h3 style="color:#fff;margin:10px 0">Descreva o profissional ideal</h3><p style="color:#cdd7f5;font-size:13px;max-width:520px;margin:0 auto 16px">Nossa IA analisa milhares de currículos em segundos para entregar os perfis com maior compatibilidade — e mostra o porquê de cada match.</p><div style="display:flex;gap:10px;max-width:620px;margin:0 auto"><input class="inp2" style="flex:1" placeholder="Ex: Procuro um farmacêutico em Curitiba com experiência em manipulação"><button class="btn orange">Gerar Ranking</button></div></div></div>'
+  +'<h3 class="sec-h" style="margin-bottom:10px">⭐ Últimos Rankings Gerados</h3>'
+  +'<div class="listcard"><div class="li">◈</div><div><h4>"Desenvolvedor React Pleno/Sênior em SP"</h4><div class="meta">Gerado há 2 dias · 12 matches encontrados com mais de 90%</div></div><div class="actions"><button class="btn ghost">Ver Resultados</button></div></div>'
+  +'<div class="listcard"><div class="li">◈</div><div><h4>"Farmacêutico RT — Curitiba"</h4><div class="meta">Gerado há 5 dias · 8 matches encontrados</div></div><div class="actions"><button class="btn ghost">Ver Resultados</button></div></div>');},
+
+ favoritos:function(){return page('Candidatos Favoritos','Gerencie seus profissionais salvos, organizados por coleções.','<button class="btn ghost">+ Nova Coleção</button>',
+  '<div class="chips"><span class="chip on">Todos (3)</span><span class="chip">Farmacêuticos (1)</span><span class="chip">TI (1)</span><span class="chip">Marketing (1)</span></div>'
+  +'<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr))">'
+   +favCard('Ana Costa','Farmacêutica · Curitiba, PR','97',true)
+   +favCard('Gabriel Santos','Desenvolvedor React · São Paulo, SP','92',true)
+   +favCard('Mariana Lima','Analista de Marketing · Rio de Janeiro, RJ','88',true)+'</div>');},
+
+ banco:function(){return page('Banco de Currículos','Acesse os currículos desbloqueados e históricos.','',
+   bancoCard('João Pereira','Dev Fullstack','Hoje, 10:30')
+  +bancoCard('Fernanda Souza','Designer UX','Ontem, 15:45')
+  +bancoCard('Lucas Martins','Gerente de Projetos','12/05/2026'));},
+
+ mensagens:function(){return page('Mensagens','Converse com os candidatos.','', chatUI('Ana Costa','Farmacêutica · Online',[
+    ['them','Olá TechCorp! Gostaria de saber mais sobre a vaga de Farmacêutico RT.'],
+    ['me','Olá Ana! Claro, a vaga é para horário comercial. Você teria disponibilidade para uma call amanhã?'],
+    ['them','Olá! Sim, tenho interesse na vaga.']],['Ana Costa','Farmacêutica','Olá! Sim, tenho interesse.'],['Carlos Santos','Dev React','Podemos agendar entrevista?']));},
+
+ financeiro:function(){return page('Financeiro','Gerencie seus créditos, planos e histórico de compras.','',
+  '<div class="cols"><div class="stack">'
+  +'<div class="card"><div class="pad"><h3 style="margin-bottom:12px">Comprar Pacotes de Vezus</h3><div class="grid" style="grid-template-columns:repeat(4,1fr)">'
+   +price('Start','10','R$ 60',false)+price('Growth','30','R$ 150',true)+price('Pro','100','R$ 450',false)+price('Enterprise','500','R$ 2.000',false)+'</div>'
+   +'<p class="muted" style="margin-top:12px">Quanto maior o pacote, menor o preço por Vezu (R$ 6,00 → R$ 4,00).</p></div></div>'
+  +'<div class="card"><div class="pad"><h3 style="margin-bottom:6px">Histórico Financeiro (ledger)</h3>'
+   +ledger('Compra · Pacote Growth','10/06/2026','+30 Vezus','var(--green)')
+   +ledger('Desbloqueio · Carlos Santos','12/06/2026','−1 Vezu','var(--red)')
+   +ledger('Desbloqueio · Gabriela Lima','12/06/2026','−1 Vezu','var(--red)')
+   +ledger('Estorno · perfil inativo','13/06/2026','+1 Vezu','var(--green)')+'</div></div>'
+  +'</div><div class="stack">'
+   +'<div class="card"><div class="pad" style="text-align:center"><div class="muted" style="text-transform:uppercase;letter-spacing:1px;font-size:11px">Saldo atual</div><div style="font-size:44px;font-weight:800;color:var(--orange-2);margin:6px 0">145</div><div class="muted">Vezus</div><div style="background:var(--bg);border-radius:12px;padding:12px;margin-top:14px"><div class="muted">Consumo neste mês</div><b style="font-size:20px">32 Vezus</b></div></div></div>'
+   +'<div class="card"><div class="pad"><h3 style="margin-bottom:6px">ROI</h3><div class="roi"><div><b>16</b><span>Vezus / contratação</span></div><div><b>12,5%</b><span>conversão</span></div><div><b>R$ 80</b><span>custo / contrat.</span></div></div></div></div>'
+  +'</div></div>');},
+
+ perfil:function(){return page('Meu Perfil da Empresa','Gerencie as informações da sua empresa visíveis para os candidatos.','<button class="btn primary">Salvar Alterações</button>',
+  '<div class="card"><div class="pad">'
+  +'<div style="display:flex;gap:16px;align-items:center;margin-bottom:8px"><div class="avatar" style="width:64px;height:64px;font-size:20px;border-radius:14px">TC</div><div><div style="display:flex;align-items:center;gap:10px"><h2 style="font-size:20px">TechCorp Brasil</h2><span class="verified">✓ Verificada</span></div><div class="muted">Tecnologia da Informação · ◎ São Paulo, SP · 👥 100–500 funcionários</div></div></div>'
+  +'<div class="formgrid" style="margin-top:18px">'
+   +fld('Razão Social','TechCorp Soluções em TI Ltda')+fldRO('CNPJ','12.345.678/0001-90')
+   +fld('Segmento','Tecnologia da Informação')+fld('Tamanho da Empresa','100–500 funcionários')
+   +fld('Website','https://www.techcorp.com.br')+fld('LinkedIn','linkedin.com/company/techcorp')
+  +'</div></div></div>');},
+
+ config:function(){return page('Configurações','Gerencie preferências, notificações e segurança da conta.','',
+  '<div class="cols"><div class="card"><div class="pad"><h3 style="margin-bottom:6px">Notificações</h3>'
+   +setRow('Novos Matches inteligentes','Receba um alerta quando a IA encontrar candidatos altamente compatíveis.','on')
+   +setRow('Mensagens de Candidatos','Notificações por email quando receber novas mensagens.','on')
+   +setRow('Alerta de saldo baixo','Avise quando o saldo de Vezus ficar abaixo de 20.','on')+'</div></div>'
+  +'<div class="card"><div class="pad"><h3 style="margin-bottom:12px">Segurança</h3>'
+   +'<label class="lbl">Senha Atual</label><input class="inp2" type="password" placeholder="••••••••" style="margin-bottom:12px">'
+   +'<label class="lbl">Nova Senha</label><input class="inp2" type="password" placeholder="••••••••" style="margin-bottom:12px">'
+   +'<label class="lbl">Confirmar Nova Senha</label><input class="inp2" type="password" placeholder="••••••••" style="margin-bottom:16px">'
+   +'<button class="btn dark block">Atualizar Senha</button></div></div></div>');}
+};
+
+/* ---------- small builders ---------- */
+function page(title,sub,actions,body){return '<div class="wrap"><div class="page-h"><div><h1>'+title+'</h1><p>'+sub+'</p></div><div style="display:flex;gap:10px">'+(actions||'')+'</div></div>'+body+'</div>';}
+function fld(l,v){return '<div><label class="lbl">'+l+'</label><input class="inp2" value="'+v+'"></div>';}
+function fldRO(l,v){return '<div><label class="lbl">'+l+' <span class="muted">(somente leitura)</span></label><input class="inp2" value="'+v+'" disabled style="background:var(--bg);color:var(--muted)"></div>';}
+function skill(n,p){return '<div class="skillbar"><span>'+n+'</span><div class="bar"><i style="width:'+p+'%"></i></div><b style="text-align:right">'+p+'%</b></div>';}
+function exp(role,org,when,items){return '<div class="listcard"><div class="li">⬒</div><div><h4>'+role+'</h4><div class="meta">'+org+' · '+when+'</div>'+(items.length?'<ul>'+items.map(function(i){return '<li>'+i+'</li>';}).join('')+'</ul>':'')+'</div><div class="actions"><button class="icobtn">✎</button><button class="icobtn">🗑</button></div></div>';}
+function cert(n,org,when){return '<div class="listcard"><div class="li" style="background:var(--orange-bg);color:var(--orange-2)">❏</div><div><h4>'+n+'</h4><div class="meta">'+org+'<br>'+when+'</div><button class="whylink">↗ Ver Credencial</button></div></div>';}
+function setRow(t,d,st){return '<div class="settingrow"><div><b style="font-size:13.5px">'+t+'</b><small class="muted" style="display:block;margin-top:2px">'+d+'</small></div><div class="toggle '+(st==='off'?'off':'')+'"></div></div>';}
+function matchC(av,title,sub,pct,tags,dims,cta){return '<div class="match-card"><div class="match-top"><div class="avatar">'+av+'</div><div class="info"><b>'+title+'</b><div class="sub">'+sub+'</div></div><div class="match-badge"><b>'+pct+'%</b><span>MATCH</span></div></div><div class="tags">'+tags.map(function(t){return '<span class="tag">'+t+'</span>';}).join('')+'</div>'+whyBlock(dims)+'<div class="unlock"><button class="btn primary" style="flex:1">'+cta+'</button></div></div>';}
+function vagaCard(title,org,meta,pct,dims){return '<div class="card"><div class="pad"><div class="match-top"><div class="avatar">🏢</div><div class="info"><b>'+title+'</b><div class="sub">'+org+'</div></div><div class="match-badge"><b>'+pct+'%</b><span>MATCH</span></div></div><div class="muted" style="margin:10px 0 4px">'+meta+'</div>'+whyBlock(dims)+'<button class="btn primary block" style="margin-top:12px">Candidatar-se</button></div></div>';}
+function intCard(av,name,loc,when){return '<div class="listcard"><div class="li">'+av+'</div><div><h4>'+name+'</h4><div class="meta">'+loc+' · '+when+'</div></div><div class="actions"><button class="btn ghost">Recusar</button><button class="btn dark">Aceitar Interesse</button></div></div>';}
+function talentCard(av,name,sub,pct,tags,dims,unlockable){var body='<div class="match-card"><div class="match-top"><div class="avatar blur">'+av+'</div><div class="info"><b style="filter:blur(4px)">'+name+'</b><div class="sub">'+sub+'</div></div><div class="match-badge"><b>'+pct+'%</b><span>MATCH IA</span></div></div><div class="tags">'+tags.map(function(t){return '<span class="tag">'+t+'</span>';}).join('')+'</div>';
+  if(dims) body+=whyBlock(dims).replace('Por que esse match?','Por que '+pct+'%?');
+  body+='<div class="unlock"><button class="btn dark" style="flex:1">🔓 Desbloquear Perfil · consome 1 Vezu</button><button class="btn ghost">☆ Salvar</button></div>';
+  if(unlockable) body+='<p class="muted" style="margin-top:8px">✓ Perfil completo, verificado e ativo — pronto para desbloqueio.</p>';
+  return body+'</div>';}
+function vagaGestao(title,meta,st,views,inter,matches){return '<div class="card" style="margin-bottom:12px"><div class="pad"><div style="display:flex;align-items:center;gap:10px;margin-bottom:4px"><h4 style="font-size:15px">'+title+'</h4><span class="statuspill st-'+st+'">'+(st==='ativa'?'Ativa':'Pausada')+'</span></div><div class="muta muted" style="margin-bottom:12px">'+meta+'</div><div style="display:flex;gap:24px;align-items:center"><div><span class="muted">◎ Views</span><br><b style="font-size:18px">'+views+'</b></div><div><span class="muted">👥 Interessados</span><br><b style="font-size:18px">'+inter+'</b></div><div><span class="muted">◈ Matches</span><br><b style="font-size:18px;color:var(--orange-2)">'+matches+'</b></div><div style="margin-left:auto"><button class="btn ghost">Ver Detalhes</button></div></div></div></div>';}
+function favCard(name,sub,pct,unlockable){return '<div class="card"><div class="pad"><div class="match-top"><div class="avatar blur">★</div><div class="info"><b style="filter:blur(4px)">'+name+'</b><div class="sub">'+sub+'</div></div><div class="match-badge"><b>'+pct+'%</b><span>MATCH</span></div></div><button class="btn dark block" style="margin-top:12px">🔓 Desbloquear (1 Vezu)</button></div></div>';}
+function bancoCard(name,role,when){return '<div class="listcard"><div class="li">❏</div><div><h4>'+name+'</h4><div class="meta">'+role+' · Desbloqueado em '+when+'</div></div><div class="actions"><button class="btn ghost">◉ Ver</button><button class="btn ghost">⬇ PDF</button></div></div>';}
+function feed(cls,ic,t,d){return '<div class="feed-item"><div class="fi '+cls+'">'+ic+'</div><div><p><b>'+t+'</b></p><small>'+d+'</small></div></div>';}
+function price(name,vz,pv,pop){return '<div class="price '+(pop?'pop':'')+'">'+(pop?'<div class="badge-pop">MAIS POPULAR</div>':'')+'<div class="pt">'+name+'</div><div class="pv">'+vz+' <span style="font-size:12px;color:var(--muted)">Vezus</span></div><div class="pp">'+pv+'</div><button class="btn '+(pop?'primary':'ghost')+' block">Comprar</button></div>';}
+function ledger(t,d,delta,col){return '<div class="settingrow"><div><b style="font-size:13px">'+t+'</b><small class="muted" style="display:block">'+d+'</small></div><b style="color:'+col+'">'+delta+'</b></div>';}
+function chatUI(name,status,msgs,c1,c2){var m=msgs.map(function(x){return '<div class="bubble '+x[0]+'">'+x[1]+'</div>';}).join('');
+  return '<div class="card"><div class="chat"><div class="list">'
+   +'<div class="li2 on"><b>'+c1[0]+'</b><small>'+c1[1]+' · '+c1[2]+'</small></div>'
+   +'<div class="li2"><b>'+c2[0]+'</b><small>'+c2[1]+' · '+c2[2]+'</small></div></div>'
+   +'<div class="thread"><div class="thead">'+name+' <span class="muted" style="font-weight:400">· '+status+'</span></div><div class="body">'+m+'</div>'
+   +'<div class="compose"><input class="inp2" style="flex:1" placeholder="Escreva sua mensagem…"><button class="btn primary">➤</button></div></div></div></div>';}
+
+/* ---------- charts ---------- */
+function drawCharts(){
+  var lc=document.getElementById('lineChart');
+  if(lc){var data=[12,18,22,30,38,44,60],w=560,h=180,pad=28,max=60;
+    var x=function(i){return pad+i*((w-pad*2)/(data.length-1));}, y=function(v){return h-pad-(v/max)*(h-pad*2);};
+    var d='',days=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'],grid='',dots='',labs='';
+    data.forEach(function(v,i){d+=(i?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1)+' ';});
+    var area='M'+x(0)+' '+(h-pad)+' '+data.map(function(v,i){return 'L'+x(i).toFixed(1)+' '+y(v).toFixed(1);}).join(' ')+' L'+x(data.length-1)+' '+(h-pad)+' Z';
+    [0,15,30,45,60].forEach(function(g){var gy=y(g);grid+='<line x1="'+pad+'" y1="'+gy+'" x2="'+(w-pad)+'" y2="'+gy+'" stroke="#eef1f7"/><text x="6" y="'+(gy+3)+'" font-size="9" fill="#9aa2b1">'+g+'</text>';});
+    data.forEach(function(v,i){dots+='<circle cx="'+x(i)+'" cy="'+y(v)+'" r="4" fill="#fff" stroke="#2563eb" stroke-width="2"/>';labs+='<text x="'+x(i)+'" y="'+(h-8)+'" font-size="10" fill="#9aa2b1" text-anchor="middle">'+days[i]+'</text>';});
+    lc.innerHTML='<svg viewBox="0 0 '+w+' '+h+'" width="100%" role="img" aria-label="Visualizações por dia"><defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b82f6" stop-opacity=".18"/><stop offset="1" stop-color="#3b82f6" stop-opacity="0"/></linearGradient></defs>'+grid+'<path d="'+area+'" fill="url(#g1)"/><path d="'+d+'" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linejoin="round"/>'+dots+labs+'</svg>';
+  }
+  var bc=document.getElementById('barChart');
+  if(bc){var data=[['Jan',2],['Fev',4],['Mar',5],['Abr',7],['Mai',5],['Jun',8]],w=560,h=190,pad=30,max=8,bw=42;
+    var x=function(i){return pad+i*((w-pad*2)/data.length)+((w-pad*2)/data.length-bw)/2;}, y=function(v){return h-pad-(v/max)*(h-pad*2);};
+    var grid='',bars='';
+    [0,2,4,6,8].forEach(function(g){var gy=y(g);grid+='<line x1="'+pad+'" y1="'+gy+'" x2="'+(w-pad)+'" y2="'+gy+'" stroke="#eef1f7"/><text x="8" y="'+(gy+3)+'" font-size="9" fill="#9aa2b1">'+g+'</text>';});
+    data.forEach(function(dd,i){var bh=(dd[1]/max)*(h-pad*2);bars+='<rect x="'+x(i)+'" y="'+y(dd[1])+'" width="'+bw+'" height="'+bh+'" rx="6" fill="#1e40af"/><text x="'+(x(i)+bw/2)+'" y="'+(y(dd[1])-6)+'" font-size="11" font-weight="700" fill="#1e40af" text-anchor="middle">'+dd[1]+'</text><text x="'+(x(i)+bw/2)+'" y="'+(h-8)+'" font-size="10" fill="#9aa2b1" text-anchor="middle">'+dd[0]+'</text>';});
+    bc.innerHTML='<svg viewBox="0 0 '+w+' '+h+'" width="100%" role="img" aria-label="Contratações por mês">'+grid+bars+'</svg>';
+  }
+}
+
+/* init */
+renderSignupFields();
+</script>
+</body>
+</html>
