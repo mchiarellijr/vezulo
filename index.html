@@ -229,8 +229,20 @@
   .statuspill{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px}
   .st-ativa{background:var(--green-bg);color:var(--green)} .st-pausada{background:#fff2df;color:#a55a00}
 
-  @media(max-width:1000px){.cols{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}.side{display:none}
-    .auth{grid-template-columns:1fr}.auth-art{display:none}.lp-feats{grid-template-columns:1fr}.lp-hero h1{font-size:38px}.formgrid{grid-template-columns:1fr}}
+  /* Menu mobile (hambúrguer + gaveta) */
+  .menu-toggle{display:none;background:none;border:0;font-size:22px;cursor:pointer;color:var(--ink);padding:4px 8px;line-height:1}
+  .backdrop{display:none;position:fixed;inset:0;background:rgba(9,15,40,.45);z-index:40}
+  .backdrop.show{display:block}
+  @media(max-width:1000px){
+    .cols{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}
+    .side{position:fixed;left:0;top:0;height:100vh;z-index:50;transform:translateX(-100%);transition:transform .25s ease;box-shadow:0 10px 40px rgba(0,0,0,.35)}
+    .side.open{transform:translateX(0)}
+    .menu-toggle{display:inline-flex;align-items:center}
+    .wrap{padding:18px 16px 60px}
+    .auth{grid-template-columns:1fr}.auth-art{display:none}.lp-feats{grid-template-columns:1fr}.lp-hero h1{font-size:38px}.formgrid{grid-template-columns:1fr}
+    .top{padding:0 16px}.page-h h1{font-size:20px}
+  }
+  @media(max-width:600px){.kpis{grid-template-columns:1fr 1fr}.search{display:none}.roi{grid-template-columns:1fr}.formgrid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -324,8 +336,10 @@
     <nav class="nav" id="sideNav"></nav>
     <div class="side-foot"><a onclick="logout()"><span class="ic">⇥</span>Sair da conta</a></div>
   </aside>
+  <div class="backdrop" id="backdrop" onclick="toggleSide(false)"></div>
   <div class="main">
     <div class="top">
+      <button class="menu-toggle" onclick="toggleSide()" aria-label="Menu">☰</button>
       <div class="search">🔍 Pesquisa global…</div>
       <div class="spacer"></div>
       <div id="vezusPill" class="vezus-pill hidden"><span class="v">V</span> 145 Vezus</div>
@@ -449,7 +463,13 @@ function buildNav(){
   nav.forEach(function(it){ h+='<a class="'+(it[0]===state.page?'active':'')+'" onclick="navTo(\''+it[0]+'\')"><span class="ic">'+it[1]+'</span>'+it[2]+'</a>'; });
   document.getElementById('sideNav').innerHTML=h;
 }
-function navTo(p){ state.page=p; buildNav(); renderPage(); document.querySelector('.main').scrollTo(0,0); window.scrollTo(0,0); }
+function navTo(p){ state.page=p; buildNav(); renderPage(); toggleSide(false); window.scrollTo(0,0); }
+function toggleSide(force){
+  var s=document.querySelector('.side'), b=document.getElementById('backdrop'); if(!s) return;
+  var open = (force===undefined) ? !s.classList.contains('open') : force;
+  s.classList.toggle('open', open);
+  if(b) b.classList.toggle('show', open);
+}
 function toggleWhy(btn){ var w=btn.nextElementSibling; w.classList.toggle('open');
   btn.innerHTML = btn.innerHTML.indexOf('▾')>-1 ? btn.innerHTML.replace('▾','▴') : btn.innerHTML.replace('▴','▾'); }
 
@@ -475,6 +495,8 @@ function vzHydrate(){
       if(state.page==='dashboard') return hydrateCompanyDashboard();
       if(state.page==='perfil') return hydrateCompanyProfile();
       if(state.page==='vagas') return hydrateCompanyVagas();
+      if(state.page==='buscar') return hydrateBuscar();
+      if(state.page==='financeiro') return hydrateFinanceiro();
     }
   }catch(e){}
 }
@@ -582,6 +604,62 @@ function publicarVaga(){
   api('/vagas',{method:'POST',body:body}).then(function(){ vagaFormToggle(); alertMsg('Vaga publicada! ✓'); reloadMyVagas(); }).catch(function(e){ alertMsg(e.message); });
 }
 function deleteVaga(id){ if(!confirm('Remover esta vaga?')) return; api('/vagas/'+id,{method:'DELETE'}).then(function(){ alertMsg('Vaga removida.'); reloadMyVagas(); }).catch(function(e){ alertMsg(e.message); }); }
+
+/* ---- Financeiro (empresa) ---- */
+function hydrateFinanceiro(){
+  api('/vezus/balance').then(function(b){ setTxt('finSaldo', b.saldo); setTxt('finConsumo', (b.consumo_mes||0)+' Vezus'); }).catch(function(){});
+  api('/vezus/packages').then(function(pks){var g=document.getElementById('pkgGrid'); if(!g) return;
+    g.innerHTML=(pks||[]).map(function(p){
+      return '<div class="price '+(p.popular?'pop':'')+'">'+(p.popular?'<div class="badge-pop">POPULAR</div>':'')+'<div class="pt">'+esc(p.nome)+'</div><div class="pv">'+p.vezus+' <span style="font-size:12px;color:var(--muted)">Vezus</span></div><div class="pp">R$ '+Number(p.preco).toFixed(2).replace(".",",")+'</div><button class="btn '+(p.popular?'primary':'ghost')+' block" onclick="comprarPacote(\''+p.id+'\',this)">Comprar</button></div>';
+    }).join('');
+  }).catch(function(){});
+  reloadLedger();
+}
+function reloadLedger(){
+  api('/vezus/ledger').then(function(rows){var box=document.getElementById('ledgerBox'); if(!box) return;
+    if(!rows||!rows.length){ box.innerHTML='<p class="muted">Sem movimentações ainda.</p>'; return; }
+    box.innerHTML=rows.map(function(r){var pos=Number(r.delta)>=0, n=Math.abs(Number(r.delta));
+      return ledger(ledgerLabel(r.reason),(r.created_at||'').substring(0,10),(pos?'+':'−')+n+' Vezu'+(n>1?'s':''),pos?'var(--green)':'var(--red)');
+    }).join('');
+  }).catch(function(){});
+}
+function ledgerLabel(reason){var m={purchase:'Compra de pacote',unlock:'Desbloqueio de perfil',welcome:'Bônus de boas-vindas',refund:'Estorno',message:'Mensagem'};return m[reason]||reason;}
+function comprarPacote(id,btn){ if(btn){btn.disabled=true;btn.textContent='…';}
+  api('/vezus/purchase',{method:'POST',body:{pacote:id}}).then(function(d){
+    alertMsg('Pacote adicionado! Saldo: '+d.saldo+' Vezus'); setTxt('finSaldo', d.saldo);
+    var pill=document.getElementById('vezusPill'); if(pill) pill.innerHTML='<span class="v">V</span> '+d.saldo+' Vezus';
+    reloadLedger();
+  }).catch(function(e){ alertMsg(e.message); }).finally(function(){ if(btn){btn.disabled=false;btn.textContent='Comprar';} });
+}
+
+/* ---- Buscar Talentos + desbloqueio (empresa) ---- */
+function hydrateBuscar(){ buscarTalentos(); }
+function buscarTalentos(){
+  var q=val('talentQ')||'', box=document.getElementById('talentList');
+  if(box) box.innerHTML='<p class="muted">Buscando…</p>';
+  api('/company/talentos'+(q?('?q='+encodeURIComponent(q)):'')).then(function(list){ if(!box) return;
+    if(!list||!list.length){ box.innerHTML='<p class="muted">Nenhum candidato encontrado. Ajuste a busca ou aguarde novos cadastros.</p>'; return; }
+    box.innerHTML=list.map(renderTalent).join('');
+  }).catch(function(e){ if(box) box.innerHTML='<p class="muted">'+esc(e.message)+'</p>'; });
+}
+function renderTalent(t){
+  var tags=(t.skills||[]).map(function(s){return '<span class="tag">'+esc(s)+'</span>';}).join('')+(t.disponivel?'<span class="tag">🟢 '+esc(t.disponivel)+'</span>':'');
+  var head='<div class="match-top"><div class="avatar'+(t.unlocked?'':' blur')+'">'+esc((t.nome||'?').substring(0,2))+'</div><div class="info"><b>'+esc(t.nome)+'</b><div class="sub">'+esc(t.cargo||'—')+(t.cidade?' · '+esc(t.cidade):'')+'</div></div><div class="match-badge"><b>'+(t.completude||0)+'%</b><span>PERFIL</span></div></div>';
+  var action;
+  if(t.unlocked && t.contato){
+    action='<div style="margin-top:12px;padding:10px;background:var(--green-bg);border-radius:10px;font-size:13px">✓ Desbloqueado — ✉ '+esc(t.contato.email)+(t.contato.telefone?' · 📱 '+esc(t.contato.telefone):'')+'</div>';
+  } else {
+    action='<div class="unlock"><button class="btn dark" style="flex:1" onclick="desbloquear('+t.id+',this)">🔓 Desbloquear Perfil · 1 Vezu</button></div>'+(t.completude>=50?'':'<p class="muted" style="margin-top:8px">Perfil ainda incompleto para desbloqueio.</p>');
+  }
+  return '<div class="match-card">'+head+'<div class="tags">'+tags+'</div>'+action+'</div>';
+}
+function desbloquear(id,btn){ if(btn){btn.disabled=true;btn.textContent='Desbloqueando…';}
+  api('/company/unlock/'+id,{method:'POST'}).then(function(d){
+    alertMsg('Perfil desbloqueado! Saldo: '+d.saldo+' Vezus');
+    var pill=document.getElementById('vezusPill'); if(pill) pill.innerHTML='<span class="v">V</span> '+d.saldo+' Vezus';
+    buscarTalentos();
+  }).catch(function(e){ if(btn){btn.disabled=false;btn.textContent='🔓 Desbloquear Perfil · 1 Vezu';} alertMsg(e.message); });
+}
 function setTxt(id,v){var el=document.getElementById(id); if(el) el.textContent=(v==null?'—':v);}
 function achCard(a){return '<div class="ach"><div class="em">🏅</div><div><b>'+(a.titulo||'')+'</b><small>'+(a.desc||'')+'</small></div></div>';}
 function stepRow(n,label,sub,ganho){return '<div class="step"><div class="dot">'+n+'</div><div><b style="font-size:13px">'+label+'</b>'+(sub?'<small>'+sub+'</small>':'')+'</div><span class="g">+'+ganho+'%</span></div>';}
@@ -770,12 +848,8 @@ var PAGES_E={
   +'</div></div></div>';},
 
  buscar:function(){return page('Buscar Talentos','Encontre os melhores profissionais para sua empresa.','',
-  '<div class="card" style="background:linear-gradient(135deg,#1e40af,#2563eb);color:#fff;margin-bottom:16px"><div class="pad"><h3 style="color:#fff">✦ Match Inteligente com IA</h3><p style="color:#cdd7f5;font-size:13px;margin:6px 0 12px">Descreva o profissional ideal e nossa IA encontrará os melhores matches no banco de talentos.</p><div style="display:flex;gap:10px"><input class="inp2" style="flex:1" placeholder="Ex: Procuro um farmacêutico em Curitiba com experiência em manipulação e atendimento…"><button class="btn orange">Buscar</button></div></div></div>'
-  +'<div class="chips"><span class="chip on">Relevância (Match IA)</span><span class="chip">Cidade: Curitiba</span><span class="chip">Profissão: Farmacêutico</span><span class="chip">Escolaridade</span><span class="chip">+ Tags</span></div>'
-  +'<p class="muted" style="margin-bottom:10px">Mostrando 5 de 124 resultados</p>'
-  +talentCard('CS','Carlos Santos','Farmacêutico · Curitiba, PR · 5 anos','97',['Manipulação','Atendimento','CRF Ativo','✓ Verificado','🟢 Disponível'],[['Hard skills',98],['Senioridade',95],['Localização',100],['Formação',100]],true)
-  +talentCard('GL','Gabriela Lima','Desenvolvedora React · São Paulo, SP','92',['React','Node','✓ Verificado','🟡 Aberto a propostas'],[['Hard skills',94],['Senioridade',89],['Localização',85],['Atividade',95]],true)
-  +talentCard('RM','Ricardo Melo','Analista de Marketing · Rio de Janeiro, RJ','88',['SEO','Growth','Mídia paga','✓ Verificado'],null,false));},
+  '<div class="card" style="background:linear-gradient(135deg,#1e40af,#2563eb);color:#fff;margin-bottom:16px"><div class="pad"><h3 style="color:#fff">✦ Match Inteligente com IA</h3><p style="color:#cdd7f5;font-size:13px;margin:6px 0 12px">Descreva o profissional ideal (cargo, cidade, skills) e busque no banco de talentos.</p><div style="display:flex;gap:10px"><input class="inp2" id="talentQ" style="flex:1" placeholder="Ex: farmacêutico Curitiba manipulação" onkeydown="if(event.key===\'Enter\')buscarTalentos()"><button class="btn orange" onclick="buscarTalentos()">Buscar</button></div></div></div>'
+  +'<div id="talentList"><p class="muted">Carregando…</p></div>');},
 
  vagas:function(){return page('Gestão de Vagas','Gerencie suas vagas abertas e acompanhe os candidatos.','<button class="btn dark" id="vagaAddBtn">+ Publicar Vaga</button>',
   '<div id="vagaForm" class="card" style="margin-bottom:16px;display:none"><div class="pad" id="vagaFormBody"></div></div><div id="myVagas"><p class="muted">Carregando…</p></div>');},
@@ -805,17 +879,10 @@ var PAGES_E={
 
  financeiro:function(){return page('Financeiro','Gerencie seus créditos, planos e histórico de compras.','',
   '<div class="cols"><div class="stack">'
-  +'<div class="card"><div class="pad"><h3 style="margin-bottom:12px">Comprar Pacotes de Vezus</h3><div class="grid" style="grid-template-columns:repeat(4,1fr)">'
-   +price('Start','10','R$ 60',false)+price('Growth','30','R$ 150',true)+price('Pro','100','R$ 450',false)+price('Enterprise','500','R$ 2.000',false)+'</div>'
-   +'<p class="muted" style="margin-top:12px">Quanto maior o pacote, menor o preço por Vezu (R$ 6,00 → R$ 4,00).</p></div></div>'
-  +'<div class="card"><div class="pad"><h3 style="margin-bottom:6px">Histórico Financeiro (ledger)</h3>'
-   +ledger('Compra · Pacote Growth','10/06/2026','+30 Vezus','var(--green)')
-   +ledger('Desbloqueio · Carlos Santos','12/06/2026','−1 Vezu','var(--red)')
-   +ledger('Desbloqueio · Gabriela Lima','12/06/2026','−1 Vezu','var(--red)')
-   +ledger('Estorno · perfil inativo','13/06/2026','+1 Vezu','var(--green)')+'</div></div>'
+  +'<div class="card"><div class="pad"><h3 style="margin-bottom:12px">Comprar Pacotes de Vezus</h3><div id="pkgGrid" class="grid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))"><p class="muted">Carregando…</p></div><p class="muted" style="margin-top:12px">Compra simulada nesta fase (sem gateway de pagamento).</p></div></div>'
+  +'<div class="card"><div class="pad"><h3 style="margin-bottom:6px">Histórico Financeiro (extrato)</h3><div id="ledgerBox"><p class="muted">Carregando…</p></div></div></div>'
   +'</div><div class="stack">'
-   +'<div class="card"><div class="pad" style="text-align:center"><div class="muted" style="text-transform:uppercase;letter-spacing:1px;font-size:11px">Saldo atual</div><div style="font-size:44px;font-weight:800;color:var(--orange-2);margin:6px 0">145</div><div class="muted">Vezus</div><div style="background:var(--bg);border-radius:12px;padding:12px;margin-top:14px"><div class="muted">Consumo neste mês</div><b style="font-size:20px">32 Vezus</b></div></div></div>'
-   +'<div class="card"><div class="pad"><h3 style="margin-bottom:6px">ROI</h3><div class="roi"><div><b>16</b><span>Vezus / contratação</span></div><div><b>12,5%</b><span>conversão</span></div><div><b>R$ 80</b><span>custo / contrat.</span></div></div></div></div>'
+   +'<div class="card"><div class="pad" style="text-align:center"><div class="muted" style="text-transform:uppercase;letter-spacing:1px;font-size:11px">Saldo atual</div><div id="finSaldo" style="font-size:44px;font-weight:800;color:var(--orange-2);margin:6px 0">—</div><div class="muted">Vezus</div><div style="background:var(--bg);border-radius:12px;padding:12px;margin-top:14px"><div class="muted">Consumo neste mês</div><b id="finConsumo" style="font-size:20px">—</b></div></div></div>'
   +'</div></div>');},
 
  perfil:function(){return page('Meu Perfil da Empresa','Gerencie as informações da sua empresa visíveis para os candidatos.','<button class="btn primary" id="btnSaveProfile">Salvar Alterações</button>',
