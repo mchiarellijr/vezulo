@@ -491,12 +491,16 @@ function vzHydrate(){
       if(state.page==='experiencias'||state.page==='formacao'||state.page==='certificados') return hydrateCollection(state.page);
       if(state.page==='habilidades') return hydrateHabilidades();
       if(state.page==='vagas') return hydrateCandidateVagas();
+      if(state.page==='mensagens') return hydrateMensagens();
+      if(state.page==='config') return hydrateConfig();
     } else {
       if(state.page==='dashboard') return hydrateCompanyDashboard();
       if(state.page==='perfil') return hydrateCompanyProfile();
       if(state.page==='vagas') return hydrateCompanyVagas();
       if(state.page==='buscar') return hydrateBuscar();
       if(state.page==='financeiro') return hydrateFinanceiro();
+      if(state.page==='mensagens') return hydrateMensagens();
+      if(state.page==='config') return hydrateConfig();
     }
   }catch(e){}
 }
@@ -647,7 +651,8 @@ function renderTalent(t){
   var head='<div class="match-top"><div class="avatar'+(t.unlocked?'':' blur')+'">'+esc((t.nome||'?').substring(0,2))+'</div><div class="info"><b>'+esc(t.nome)+'</b><div class="sub">'+esc(t.cargo||'—')+(t.cidade?' · '+esc(t.cidade):'')+'</div></div><div class="match-badge"><b>'+(t.completude||0)+'%</b><span>PERFIL</span></div></div>';
   var action;
   if(t.unlocked && t.contato){
-    action='<div style="margin-top:12px;padding:10px;background:var(--green-bg);border-radius:10px;font-size:13px">✓ Desbloqueado — ✉ '+esc(t.contato.email)+(t.contato.telefone?' · 📱 '+esc(t.contato.telefone):'')+'</div>';
+    action='<div style="margin-top:12px;padding:10px;background:var(--green-bg);border-radius:10px;font-size:13px">✓ Desbloqueado — ✉ '+esc(t.contato.email)+(t.contato.telefone?' · 📱 '+esc(t.contato.telefone):'')+'</div>'
+      +'<div class="unlock"><button class="btn ghost" style="flex:1" onclick="msgUser('+t.id+')">✉ Enviar mensagem</button></div>';
   } else {
     action='<div class="unlock"><button class="btn dark" style="flex:1" onclick="desbloquear('+t.id+',this)">🔓 Desbloquear Perfil · 1 Vezu</button></div>'+(t.completude>=50?'':'<p class="muted" style="margin-top:8px">Perfil ainda incompleto para desbloqueio.</p>');
   }
@@ -659,6 +664,48 @@ function desbloquear(id,btn){ if(btn){btn.disabled=true;btn.textContent='Desbloq
     var pill=document.getElementById('vezusPill'); if(pill) pill.innerHTML='<span class="v">V</span> '+d.saldo+' Vezus';
     buscarTalentos();
   }).catch(function(e){ if(btn){btn.disabled=false;btn.textContent='🔓 Desbloquear Perfil · 1 Vezu';} alertMsg(e.message); });
+}
+function msgUser(id){ navTo('mensagens'); setTimeout(function(){ openThread(id); },350); }
+
+/* ---- Mensagens ---- */
+var vzChat={other:null};
+function hydrateMensagens(){ vzChat.other=null; api('/messages').then(renderChat).catch(function(){ renderChat([]); }); }
+function renderChat(convs){
+  var wrap=document.getElementById('msgWrap'); if(!wrap) return;
+  var list=(convs&&convs.length)?convs.map(function(c){
+    return '<div class="li2" onclick="openThread('+c.user_id+')"><b>'+esc(c.nome)+'</b>'+(c.nao_lidas?' <span style="background:var(--blue-2);color:#fff;border-radius:10px;padding:1px 7px;font-size:10px">'+c.nao_lidas+'</span>':'')+'<small>'+esc((c.ultima||'').substring(0,42))+'</small></div>';
+  }).join(''):'<div class="li2"><small class="muted">Nenhuma conversa ainda.</small></div>';
+  wrap.innerHTML='<div class="card"><div class="chat"><div class="list" id="chatList">'+list+'</div><div class="thread" id="chatThread"><div class="body" style="align-items:center;justify-content:center"><p class="muted">Selecione uma conversa</p></div></div></div></div>';
+}
+function openThread(id){
+  vzChat.other=id;
+  api('/messages/thread/'+id).then(function(t){
+    var th=document.getElementById('chatThread'); if(!th) return;
+    var bubbles=(t.mensagens&&t.mensagens.length)?t.mensagens.map(function(m){return '<div class="bubble '+(m.mine?'me':'them')+'">'+esc(m.body)+'</div>';}).join(''):'<p class="muted" style="margin:auto">Nenhuma mensagem. Diga olá 👋</p>';
+    th.innerHTML='<div class="thead">'+esc(t.other.nome)+'</div><div class="body" id="chatBody">'+bubbles+'</div><div class="compose"><input class="inp2" id="msgInput" style="flex:1" placeholder="Escreva sua mensagem…" onkeydown="if(event.key===\'Enter\')sendMsg()"><button class="btn primary" onclick="sendMsg()">➤</button></div>';
+    var b=document.getElementById('chatBody'); if(b) b.scrollTop=b.scrollHeight;
+  }).catch(function(e){ alertMsg(e.message); });
+}
+function sendMsg(){
+  var body=(val('msgInput')||'').trim(); if(!body||!vzChat.other) return;
+  api('/messages',{method:'POST',body:{to:vzChat.other,body:body}}).then(function(){ setVal('msgInput',''); openThread(vzChat.other); }).catch(function(e){ alertMsg(e.message); });
+}
+
+/* ---- Configurações ---- */
+function hydrateConfig(){
+  api('/settings').then(function(s){ Object.keys(s).forEach(function(k){ var el=document.getElementById('set_'+k); if(el) el.classList.toggle('off', !s[k]); }); }).catch(function(){});
+}
+function toggleSetting(key){
+  var el=document.getElementById('set_'+key); if(!el) return;
+  var newOn=el.classList.contains('off');
+  el.classList.toggle('off', !newOn);
+  var body={}; body[key]=newOn;
+  api('/settings',{method:'PUT',body:body}).catch(function(e){ alertMsg(e.message); el.classList.toggle('off', newOn); });
+}
+function changePassword(){
+  var atual=val('pwAtual')||'', nova=val('pwNova')||'';
+  if(!atual||nova.length<6){ alertMsg('Informe a senha atual e uma nova senha (mín. 6 caracteres).'); return; }
+  api('/auth/password',{method:'PUT',body:{senha_atual:atual,nova_senha:nova}}).then(function(d){ if(d&&d.token){ VZ.token=d.token; } setVal('pwAtual','');setVal('pwNova',''); alertMsg('Senha atualizada! ✓'); }).catch(function(e){ alertMsg(e.message); });
 }
 function setTxt(id,v){var el=document.getElementById(id); if(el) el.textContent=(v==null?'—':v);}
 function achCard(a){return '<div class="ach"><div class="em">🏅</div><div><b>'+(a.titulo||'')+'</b><small>'+(a.desc||'')+'</small></div></div>';}
@@ -804,22 +851,20 @@ var PAGES_C={
   +intCard('IH','Inova Health','◎ Curitiba, PR','Visualizou seu perfil ontem')
   +intCard('ES','EduSmart Solutions','◎ Belo Horizonte, MG','Visualizou seu perfil há 3 dias'));},
 
- mensagens:function(){return page('Mensagens','Converse com recrutadores interessados.','', chatUI('Recrutador TechCorp','TechCorp Brasil · Online',[
-    ['them','Olá João! Vimos o seu perfil e achamos que você tem fit com nossa vaga de Sênior. Tem disponibilidade para batermos um papo?'],
-    ['me','Olá! Tenho sim. Podemos agendar para amanhã à tarde?']],['Recrutador TechCorp','TechCorp Brasil','Olá João! Tudo bem?'],['RH Inova','Inova Health','Obrigado pelo seu tempo.']));},
+ mensagens:function(){return page('Mensagens','Converse com empresas interessadas.','', '<div id="msgWrap"><p class="muted">Carregando…</p></div>');},
 
  certificados:function(){return page('Certificados','Adicione licenças e certificações relevantes.','<button class="btn dark" id="collAddBtn">+ Adicionar</button>',
   '<div id="collForm" class="card" style="margin-bottom:16px;display:none"><div class="pad" id="collFormBody"></div></div><div id="collList"><p class="muted">Carregando…</p></div>');},
 
  config:function(){return page('Configurações','Gerencie preferências, privacidade e segurança.','',
   '<div class="cols"><div class="card"><div class="pad"><h3 style="margin-bottom:6px">Privacidade do Perfil</h3>'
-   +setRow('Perfil Público','Permitir que empresas encontrem seu perfil na busca.','on')
-   +setRow('Mostrar disponibilidade','Exibir status “Disponível / Aberto a propostas”.','on')
-   +setRow('Notificações por email','Novos matches e mensagens.','off')+'</div></div>'
+   +setRowK('perfil_publico','Perfil Público','Permitir que empresas encontrem seu perfil na busca.')
+   +setRowK('mostrar_disponibilidade','Mostrar disponibilidade','Exibir status “Disponível / Aberto a propostas”.')
+   +setRowK('notif_email','Notificações por email','Novos matches e mensagens.')+'</div></div>'
   +'<div class="card"><div class="pad"><h3 style="margin-bottom:12px">Segurança</h3>'
-   +'<label class="lbl">Senha Atual</label><input class="inp2" type="password" placeholder="••••••••" style="margin-bottom:12px">'
-   +'<label class="lbl">Nova Senha</label><input class="inp2" type="password" placeholder="••••••••" style="margin-bottom:16px">'
-   +'<button class="btn dark block">Atualizar Senha</button></div></div></div>');}
+   +'<label class="lbl">Senha Atual</label><input class="inp2" id="pwAtual" type="password" placeholder="••••••••" style="margin-bottom:12px">'
+   +'<label class="lbl">Nova Senha</label><input class="inp2" id="pwNova" type="password" placeholder="mínimo 6 caracteres" style="margin-bottom:16px">'
+   +'<button class="btn dark block" onclick="changePassword()">Atualizar Senha</button></div></div></div>');}
 };
 
 var PAGES_E={
@@ -872,10 +917,7 @@ var PAGES_E={
   +bancoCard('Fernanda Souza','Designer UX','Ontem, 15:45')
   +bancoCard('Lucas Martins','Gerente de Projetos','12/05/2026'));},
 
- mensagens:function(){return page('Mensagens','Converse com os candidatos.','', chatUI('Ana Costa','Farmacêutica · Online',[
-    ['them','Olá TechCorp! Gostaria de saber mais sobre a vaga de Farmacêutico RT.'],
-    ['me','Olá Ana! Claro, a vaga é para horário comercial. Você teria disponibilidade para uma call amanhã?'],
-    ['them','Olá! Sim, tenho interesse na vaga.']],['Ana Costa','Farmacêutica','Olá! Sim, tenho interesse.'],['Carlos Santos','Dev React','Podemos agendar entrevista?']));},
+ mensagens:function(){return page('Mensagens','Converse com os candidatos.','', '<div id="msgWrap"><p class="muted">Carregando…</p></div>');},
 
  financeiro:function(){return page('Financeiro','Gerencie seus créditos, planos e histórico de compras.','',
   '<div class="cols"><div class="stack">'
@@ -896,14 +938,13 @@ var PAGES_E={
 
  config:function(){return page('Configurações','Gerencie preferências, notificações e segurança da conta.','',
   '<div class="cols"><div class="card"><div class="pad"><h3 style="margin-bottom:6px">Notificações</h3>'
-   +setRow('Novos Matches inteligentes','Receba um alerta quando a IA encontrar candidatos altamente compatíveis.','on')
-   +setRow('Mensagens de Candidatos','Notificações por email quando receber novas mensagens.','on')
-   +setRow('Alerta de saldo baixo','Avise quando o saldo de Vezus ficar abaixo de 20.','on')+'</div></div>'
+   +setRowK('notif_matches','Novos Matches inteligentes','Receba um alerta quando a IA encontrar candidatos altamente compatíveis.')
+   +setRowK('notif_mensagens','Mensagens de Candidatos','Notificações por email quando receber novas mensagens.')
+   +setRowK('saldo_baixo','Alerta de saldo baixo','Avise quando o saldo de Vezus ficar abaixo de 20.')+'</div></div>'
   +'<div class="card"><div class="pad"><h3 style="margin-bottom:12px">Segurança</h3>'
-   +'<label class="lbl">Senha Atual</label><input class="inp2" type="password" placeholder="••••••••" style="margin-bottom:12px">'
-   +'<label class="lbl">Nova Senha</label><input class="inp2" type="password" placeholder="••••••••" style="margin-bottom:12px">'
-   +'<label class="lbl">Confirmar Nova Senha</label><input class="inp2" type="password" placeholder="••••••••" style="margin-bottom:16px">'
-   +'<button class="btn dark block">Atualizar Senha</button></div></div></div>');}
+   +'<label class="lbl">Senha Atual</label><input class="inp2" id="pwAtual" type="password" placeholder="••••••••" style="margin-bottom:12px">'
+   +'<label class="lbl">Nova Senha</label><input class="inp2" id="pwNova" type="password" placeholder="mínimo 6 caracteres" style="margin-bottom:16px">'
+   +'<button class="btn dark block" onclick="changePassword()">Atualizar Senha</button></div></div></div>');}
 };
 
 /* ---------- small builders ---------- */
@@ -916,6 +957,7 @@ function skill(n,p){return '<div class="skillbar"><span>'+n+'</span><div class="
 function exp(role,org,when,items){return '<div class="listcard"><div class="li">⬒</div><div><h4>'+role+'</h4><div class="meta">'+org+' · '+when+'</div>'+(items.length?'<ul>'+items.map(function(i){return '<li>'+i+'</li>';}).join('')+'</ul>':'')+'</div><div class="actions"><button class="icobtn">✎</button><button class="icobtn">🗑</button></div></div>';}
 function cert(n,org,when){return '<div class="listcard"><div class="li" style="background:var(--orange-bg);color:var(--orange-2)">❏</div><div><h4>'+n+'</h4><div class="meta">'+org+'<br>'+when+'</div><button class="whylink">↗ Ver Credencial</button></div></div>';}
 function setRow(t,d,st){return '<div class="settingrow"><div><b style="font-size:13.5px">'+t+'</b><small class="muted" style="display:block;margin-top:2px">'+d+'</small></div><div class="toggle '+(st==='off'?'off':'')+'"></div></div>';}
+function setRowK(key,t,d){return '<div class="settingrow"><div><b style="font-size:13.5px">'+t+'</b><small class="muted" style="display:block;margin-top:2px">'+d+'</small></div><div class="toggle off" id="set_'+key+'" onclick="toggleSetting(\''+key+'\')"></div></div>';}
 function matchC(av,title,sub,pct,tags,dims,cta){return '<div class="match-card"><div class="match-top"><div class="avatar">'+av+'</div><div class="info"><b>'+title+'</b><div class="sub">'+sub+'</div></div><div class="match-badge"><b>'+pct+'%</b><span>MATCH</span></div></div><div class="tags">'+tags.map(function(t){return '<span class="tag">'+t+'</span>';}).join('')+'</div>'+whyBlock(dims)+'<div class="unlock"><button class="btn primary" style="flex:1">'+cta+'</button></div></div>';}
 function vagaCard(title,org,meta,pct,dims){return '<div class="card"><div class="pad"><div class="match-top"><div class="avatar">🏢</div><div class="info"><b>'+title+'</b><div class="sub">'+org+'</div></div><div class="match-badge"><b>'+pct+'%</b><span>MATCH</span></div></div><div class="muted" style="margin:10px 0 4px">'+meta+'</div>'+whyBlock(dims)+'<button class="btn primary block" style="margin-top:12px">Candidatar-se</button></div></div>';}
 function intCard(av,name,loc,when){return '<div class="listcard"><div class="li">'+av+'</div><div><h4>'+name+'</h4><div class="meta">'+loc+' · '+when+'</div></div><div class="actions"><button class="btn ghost">Recusar</button><button class="btn dark">Aceitar Interesse</button></div></div>';}
