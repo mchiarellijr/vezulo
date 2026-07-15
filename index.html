@@ -496,6 +496,8 @@ function vzHydrate(){
       if(state.page==='experiencias'||state.page==='formacao'||state.page==='certificados') return hydrateCollection(state.page);
       if(state.page==='habilidades') return hydrateHabilidades();
       if(state.page==='vagas') return hydrateCandidateVagas();
+      if(state.page==='curriculo') return hydrateCurriculo();
+      if(state.page==='empresas') return hydrateInteressadas();
       if(state.page==='mensagens') return hydrateMensagens();
       if(state.page==='config') return hydrateConfig();
     } else {
@@ -563,6 +565,44 @@ function skillAddSoft(){var n=(val('ssNome')||'').trim(); if(!n) return; vzSkill
 function skillDel(t,i){ vzSkills[t].splice(i,1); renderSkills(); }
 function saveSkills(){ api('/candidate/skills',{method:'PUT',body:vzSkills}).then(function(){ alertMsg('Habilidades salvas! ✓'); }).catch(function(e){ alertMsg(e.message); }); }
 
+/* ---- Empresas Interessadas (candidato) ---- */
+function hydrateInteressadas(){
+  var box=document.getElementById('interBox'); if(!box) return;
+  api('/candidate/interested').then(function(list){
+    if(!list||!list.length){ box.innerHTML='<p class="muted">Nenhuma empresa visualizou seu perfil ainda. Complete seu perfil e adicione skills para aparecer nas buscas.</p>'; return; }
+    box.innerHTML=list.map(function(c){
+      var meta=[c.segmento,c.cidade].filter(Boolean).map(esc).join(' · ')||'—';
+      var av=esc((c.nome||'E').substring(0,2)).toUpperCase();
+      return '<div class="listcard"><div class="li">'+av+'</div><div><h4>'+esc(c.nome)+'</h4><div class="meta">'+meta+' · visualizou seu perfil</div></div><div class="actions"><button class="btn dark" onclick="msgUser('+c.id+')">✉ Enviar mensagem</button></div></div>';
+    }).join('');
+  }).catch(function(){});
+}
+
+/* ---- Meu Currículo (candidato) ---- */
+function hydrateCurriculo(){
+  var box=document.getElementById('cvBox'); if(!box) return;
+  Promise.all([
+    api('/candidate/profile').catch(function(){return {};}),
+    api('/candidate/skills').catch(function(){return {hard:[],soft:[]};}),
+    api('/candidate/experience').catch(function(){return [];}),
+    api('/candidate/education').catch(function(){return [];})
+  ]).then(function(r){
+    var p=r[0]||{}, sk=r[1]||{hard:[],soft:[]}, exp=r[2]||[], edu=r[3]||[], u=VZ.user||{};
+    var nome=esc(p.nome||u.nome||'Seu nome');
+    var hard=((sk.hard)||[]).map(function(h){return skill(esc(h.nome),h.nivel||0);}).join('')||'<p class="muted">Sem hard skills. Adicione em Habilidades.</p>';
+    var soft=((sk.soft)||[]).map(function(s){return '<span class="tag">'+esc(s)+'</span>';}).join('');
+    var expH=((exp)||[]).map(function(e){return '<div class="listcard"><div class="li">▤</div><div><h4>'+esc(e.cargo||e.titulo||'—')+'</h4><div class="meta">'+[e.empresa,e.inicio,e.fim].filter(Boolean).map(esc).join(' · ')+'</div>'+(e.descricao?'<div class="meta">'+esc(e.descricao)+'</div>':'')+'</div></div>';}).join('')||'<p class="muted">Sem experiências. Adicione em Experiências.</p>';
+    var eduH=((edu)||[]).map(function(e){return '<div class="listcard"><div class="li">◑</div><div><h4>'+esc(e.curso||e.titulo||'—')+'</h4><div class="meta">'+[e.instituicao,e.nivel,e.ano_conclusao].filter(Boolean).map(esc).join(' · ')+'</div></div></div>';}).join('');
+    var contato=[p.cidade?'◎ '+esc(p.cidade):'', u.email?'✉ '+esc(u.email):'', p.telefone?'📱 '+esc(p.telefone):'', p.linkedin?esc(p.linkedin):''].filter(Boolean).join(' · ');
+    box.innerHTML='<div class="card"><div style="background:var(--navy);color:#fff;padding:26px;border-radius:16px 16px 0 0"><h2 style="font-size:22px">'+nome+'</h2><div style="color:#8fa0d8;font-weight:600;margin:4px 0 10px">'+esc(p.cargo_desejado||'')+'</div>'+(p.resumo?'<p style="color:#c7d0ea;font-size:13px;max-width:640px;line-height:1.6">'+esc(p.resumo)+'</p>':'')+(contato?'<div style="color:#aeb9e0;font-size:12px;margin-top:12px">'+contato+'</div>':'')+'</div>'
+      +'<div class="pad"><h3 style="margin-bottom:8px">Hard Skills</h3>'+hard
+      +(soft?'<div class="muted" style="margin:16px 0 10px;text-transform:uppercase;letter-spacing:1px;font-size:11px">Soft Skills</div><div class="tags">'+soft+'</div>':'')
+      +'<h3 style="margin:18px 0 8px">Experiências</h3>'+expH
+      +(eduH?'<h3 style="margin:18px 0 8px">Formação</h3>'+eduH:'')
+      +'</div></div>';
+  });
+}
+
 /* ---- Vagas: candidato ---- */
 function hydrateCandidateVagas(){
   var box=document.getElementById('vagasList'); if(!box) return;
@@ -593,6 +633,7 @@ function hydrateCompanyVagas(){
     +'<div><label class="lbl">Cidade</label><input class="inp2" id="vgCidade" placeholder="Ex: São Paulo"></div>'
     +'<div><label class="lbl">Salário mín (R$)</label><input class="inp2" id="vgSalMin" type="number"></div>'
     +'<div><label class="lbl">Salário máx (R$)</label><input class="inp2" id="vgSalMax" type="number"></div>'
+    +'<div class="full"><label class="lbl">Skills desejadas <span class="muted">(separadas por vírgula — melhora o match)</span></label><input class="inp2" id="vgSkills" placeholder="Ex: React, TypeScript, Node"></div>'
     +'<div class="full"><label class="lbl">Descrição</label><textarea class="inp2" id="vgDesc" placeholder="Responsabilidades, requisitos, benefícios…"></textarea></div>'
     +'</div><div style="margin-top:12px;display:flex;gap:8px"><button class="btn primary" onclick="publicarVaga()">Publicar</button><button class="btn ghost" onclick="vagaFormToggle()">Cancelar</button></div>';
   var b=document.getElementById('vagaAddBtn'); if(b) b.onclick=vagaFormToggle;
@@ -609,7 +650,8 @@ function reloadMyVagas(){
 }
 function publicarVaga(){
   var titulo=(val('vgTitulo')||'').trim(); if(!titulo){ alertMsg('Informe o título da vaga.'); return; }
-  var body={titulo:titulo,modalidade:val('vgModal'),cidade:val('vgCidade'),salario_min:val('vgSalMin'),salario_max:val('vgSalMax'),descricao:val('vgDesc'),status:'ativa'};
+  var skills=(val('vgSkills')||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
+  var body={titulo:titulo,modalidade:val('vgModal'),cidade:val('vgCidade'),salario_min:val('vgSalMin'),salario_max:val('vgSalMax'),descricao:val('vgDesc'),skills:skills,status:'ativa'};
   api('/vagas',{method:'POST',body:body}).then(function(){ vagaFormToggle(); alertMsg('Vaga publicada! ✓'); reloadMyVagas(); }).catch(function(e){ alertMsg(e.message); });
 }
 function deleteVaga(id){ if(!confirm('Remover esta vaga?')) return; api('/vagas/'+id,{method:'DELETE'}).then(function(){ alertMsg('Vaga removida.'); reloadMyVagas(); }).catch(function(e){ alertMsg(e.message); }); }
@@ -862,12 +904,8 @@ var PAGES_C={
    +'<div class="full"><label class="lbl">Resumo Profissional</label><textarea class="inp2" id="pResumo" placeholder="Conte sua trajetória, especialidades e o que você busca…"></textarea></div>'
   +'</div></div></div>');},
 
- curriculo:function(){return page('Meu Currículo','Visualize como as empresas veem seu perfil.','<div style="display:flex;gap:10px"><button class="btn ghost">⬇ Baixar PDF</button><button class="btn dark">✦ Gerar currículo com IA</button></div>',
-  '<div class="card"><div style="background:var(--navy);color:#fff;padding:26px;border-radius:16px 16px 0 0"><h2 style="font-size:22px">João Silva</h2><div style="color:#8fa0d8;font-weight:600;margin:4px 0 10px">Desenvolvedor Frontend Sênior</div><p style="color:#c7d0ea;font-size:13px;max-width:640px;line-height:1.6">Profissional com mais de 5 anos de experiência na criação de interfaces web modernas e escaláveis. Especialista em React e ecossistema JavaScript.</p><div style="color:#aeb9e0;font-size:12px;margin-top:12px">◎ São Paulo, SP · ✉ joao.silva@email.com · 📱 (11) 98765-4321</div></div>'
-  +'<div class="pad"><h3 style="margin-bottom:6px">Habilidades</h3><div class="muted" style="margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;font-size:11px">Hard Skills</div>'
-   +skill('React / Next.js',95)+skill('TypeScript',90)+skill('Tailwind CSS',85)+skill('Node.js',75)
-   +'<div class="muted" style="margin:16px 0 10px;text-transform:uppercase;letter-spacing:1px;font-size:11px">Soft Skills</div><div class="tags">'+['Liderança técnica','Comunicação assertiva','Resolução de problemas','Trabalho em equipe','Mentoria','Metodologias Ágeis'].map(function(s){return '<span class="tag">'+s+'</span>';}).join('')+'</div>'
-  +'</div></div>');},
+ curriculo:function(){return page('Meu Currículo','Visualize como as empresas veem seu perfil.','<button class="btn ghost" onclick="window.print()">⬇ Baixar / Imprimir</button>',
+  '<div id="cvBox"><p class="muted">Carregando…</p></div>');},
 
  experiencias:function(){return page('Experiências','Adicione seu histórico profissional para destacar seu perfil.','<button class="btn dark" id="collAddBtn">+ Adicionar</button>',
   '<div id="collForm" class="card" style="margin-bottom:16px;display:none"><div class="pad" id="collFormBody"></div></div><div id="collList"><p class="muted">Carregando…</p></div>');},
@@ -885,9 +923,7 @@ var PAGES_C={
   '<div id="vagasList" class="grid" style="grid-template-columns:repeat(auto-fill,minmax(320px,1fr))"><p class="muted">Carregando…</p></div>');},
 
  empresas:function(){return page('Empresas Interessadas','Empresas que visualizaram seu perfil recentemente.','',
-   intCard('TC','TechCorp Brasil','◎ São Paulo, SP','Visualizou seu perfil hoje')
-  +intCard('IH','Inova Health','◎ Curitiba, PR','Visualizou seu perfil ontem')
-  +intCard('ES','EduSmart Solutions','◎ Belo Horizonte, MG','Visualizou seu perfil há 3 dias'));},
+   '<div id="interBox"><p class="muted">Carregando…</p></div>');},
 
  mensagens:function(){return page('Mensagens','Converse com empresas interessadas.','', '<div id="msgWrap"><p class="muted">Carregando…</p></div>');},
 
