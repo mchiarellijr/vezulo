@@ -464,9 +464,55 @@ function renderPage(){
 function setVal(id,v){var el=document.getElementById(id); if(el){el.value=(v==null?'':v);}}
 function vzHydrate(){
   try{
-    if(state.page!=='perfil') return;
-    if(state.role==='C') hydrateCandidateProfile(); else hydrateCompanyProfile();
+    if(state.page==='dashboard'){ if(state.role==='C') hydrateCandidateDashboard(); else hydrateCompanyDashboard(); return; }
+    if(state.page==='perfil'){ if(state.role==='C') hydrateCandidateProfile(); else hydrateCompanyProfile(); return; }
   }catch(e){}
+}
+function setTxt(id,v){var el=document.getElementById(id); if(el) el.textContent=(v==null?'—':v);}
+function achCard(a){return '<div class="ach"><div class="em">🏅</div><div><b>'+(a.titulo||'')+'</b><small>'+(a.desc||'')+'</small></div></div>';}
+function stepRow(n,label,sub,ganho){return '<div class="step"><div class="dot">'+n+'</div><div><b style="font-size:13px">'+label+'</b>'+(sub?'<small>'+sub+'</small>':'')+'</div><span class="g">+'+ganho+'%</span></div>';}
+var MES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+function mesShort(ym){var p=(ym||'').split('-');return p[1]?MES[parseInt(p[1],10)-1]:ym;}
+function feedLabel(t){var m={vaga_view:'Vaga visualizada',vaga_apply:'Nova candidatura',unlock:'Perfil desbloqueado',interest:'Interesse registrado',profile_view:'Perfil visualizado',match_generated:'Match gerado',purchase:'Vezus adquiridos'};return m[t]||t;}
+
+function hydrateCandidateDashboard(){
+  api('/candidate/metrics').then(function(m){
+    setTxt('kcViews', m.visualizacoes||0);
+    setTxt('kcInteressadas', m.empresas_interessadas||0);
+    setTxt('kcMatches', m.matches_realizados||0);
+    setTxt('kcPerfil', (m.perfil_completo||0)+'%');
+    var ring=document.getElementById('ringPerfil'); if(ring) ring.style.setProperty('--p', m.perfil_completo||0);
+    setTxt('ringPerfilNum', (m.perfil_completo||0)+'%');
+    if(m.evolucao) drawLine(m.evolucao.map(function(d){return d.valor;}));
+    var ab=document.getElementById('achBox');
+    if(ab) ab.innerHTML=(m.conquistas&&m.conquistas.length)?m.conquistas.map(achCard).join(''):'<p class="muted">Complete seu perfil para desbloquear conquistas.</p>';
+    var sb=document.getElementById('stepsBox');
+    if(sb) sb.innerHTML=(m.proximos_passos&&m.proximos_passos.length)?m.proximos_passos.map(function(s,i){return stepRow(i+1,s.label,'',s.ganho);}).join(''):'<div class="step"><div class="dot done">✓</div><div><b style="font-size:13px">Perfil completo! 🎉</b></div></div>';
+  }).catch(function(){});
+  api('/candidate/recomendadas').then(function(list){
+    var box=document.getElementById('recBox'); if(!box) return;
+    if(!list||!list.length){ box.innerHTML='<p class="muted" style="padding:8px 0">Ainda não há vagas recomendadas. Quando empresas publicarem vagas compatíveis com seu perfil, elas aparecem aqui com o match explicável.</p>'; return; }
+    box.innerHTML=list.slice(0,3).map(function(v){
+      var b=v.match_breakdown||{};
+      var dims=[['Hard skills',b.skills||0],['Senioridade',b.senioridade||0],['Localização',b.local||0],['Salário',b.salario||0]];
+      var sub=[v.empresa,v.modalidade,(v.salario_combinar?'A combinar':'')].filter(Boolean).join(' · ');
+      var av=(v.titulo||'V').substring(0,2).toUpperCase();
+      return matchC(av,v.titulo||'Vaga',sub,String(v.match||0),(v.skills||[]).map(function(s){return s.nome;}),dims,'Candidatar-se');
+    }).join('');
+  }).catch(function(){});
+}
+function hydrateCompanyDashboard(){
+  api('/company/metrics').then(function(m){
+    setTxt('keSaldo', m.saldo_vezus||0);
+    setTxt('keViews', m.visualizacoes||0);
+    setTxt('keCand', m.candidatos||0);
+    setTxt('keMatches', m.matches_ia||0);
+    setTxt('ringSaldoNum', m.saldo_vezus||0);
+    var ring=document.getElementById('ringSaldo'); if(ring) ring.style.setProperty('--p', Math.min(100,(m.saldo_vezus||0)));
+    if(m.contratacoes_mes) drawBar(m.contratacoes_mes.map(function(d){return [mesShort(d.mes), d.valor];}));
+    var fb=document.getElementById('feedBox');
+    if(fb) fb.innerHTML=(m.feed&&m.feed.length)?m.feed.map(function(f){return feed('i-blue','◔',feedLabel(f.type),(f.created_at||''));}).join(''):'<p class="muted">Sem atividades ainda. Publique vagas e busque talentos para começar.</p>';
+  }).catch(function(){});
 }
 function hydrateCandidateProfile(){
   var u=VZ.user||{}; setVal('pEmail', u.email);
@@ -505,38 +551,28 @@ function hydrateCompanyProfile(){
 
 <script>
 /* ============ PAGE TEMPLATES ============ */
-function kpi(cls,ic,num,lab,delta){return '<div class="card kpi"><div class="ico '+cls+'">'+ic+'</div><div class="num">'+num+'</div><div class="lab">'+lab+'</div>'+(delta?'<div class="delta '+delta[0]+'">'+delta[1]+'</div>':'')+'</div>';}
+function kpi(cls,ic,num,lab,delta,id){return '<div class="card kpi"><div class="ico '+cls+'">'+ic+'</div><div class="num"'+(id?' id="'+id+'"':'')+'>'+num+'</div><div class="lab">'+lab+'</div>'+(delta?'<div class="delta '+delta[0]+'">'+delta[1]+'</div>':'')+'</div>';}
 function whyBlock(dims){var h='<button class="whylink" onclick="toggleWhy(this)">Por que esse match? ▾</button><div class="why">';
   dims.forEach(function(d){var col=d[1]>=90?'var(--green)':'var(--blue-3)';h+='<div class="dim"><span>'+d[0]+'</span><div class="mini"><i style="width:'+d[1]+'%;background:'+col+'"></i></div><b>'+d[1]+'%</b></div>';});
   return h+'</div>';}
 
 var PAGES_C={
- dashboard:function(){return '<div class="wrap">'
-  +'<div class="page-h"><div><h1>Bem-vindo, João! 👋</h1><p>Seu perfil está em alta esta semana. Continue assim.</p></div>'
+ dashboard:function(){var nome=(((VZ.user&&VZ.user.nome)||'').split(' ')[0])||'';return '<div class="wrap">'
+  +'<div class="page-h"><div><h1 id="dashHello">Bem-vindo'+(nome?', '+nome:'')+'! 👋</h1><p>Acompanhe seu perfil e suas oportunidades.</p></div>'
   +'<div style="display:flex;gap:10px"><button class="btn ghost" onclick="navTo(\'perfil\')">✦ Melhorar com IA</button><button class="btn dark" onclick="navTo(\'vagas\')">Ver Vagas Recomendadas</button></div></div>'
-  +'<div class="note">ℹ️ Os números derivam dos motores de métricas (eventos, match, completude). Clique em “Por que esse match?”.</div>'
   +'<div class="grid kpis">'
-   +kpi('i-blue','◎','209','Visualizações',['up','▲ 18% vs. semana anterior'])
-   +kpi('i-purple','▣','14','Empresas interessadas',['up','▲ 3 novas'])
-   +kpi('i-pink','◈','8','Matches realizados',['','≥ 80% de compatibilidade'])
-   +kpi('i-green','▲','92%','Perfil completo',['up','faltam 2 itens'])
+   +kpi('i-blue','◎','—','Visualizações','','kcViews')
+   +kpi('i-purple','▣','—','Empresas interessadas','','kcInteressadas')
+   +kpi('i-pink','◈','—','Matches realizados',['','≥ 80% de compatibilidade'],'kcMatches')
+   +kpi('i-green','▲','—','Perfil completo','','kcPerfil')
   +'</div>'
   +'<div class="cols" style="margin-top:16px"><div class="stack">'
    +'<div class="card"><div class="pad"><div class="sec-h"><h3>Evolução do Perfil</h3><span class="muted">Visualizações · últimos 7 dias</span></div><div id="lineChart"></div></div></div>'
-   +'<div class="card"><div class="pad"><div class="sec-h"><h3>Suas melhores recomendações</h3><span class="muted">Match IA explicável</span></div>'
-     +matchC('DT','Desenvolvedor Frontend Sênior','TechCorp Brasil · Remoto · R$ 12–15 mil','95',['React','TypeScript','Node.js','Remoto ✓'],[['Hard skills',96],['Senioridade',90],['Localização',100],['Salário',85]],'Candidatar-se')
-     +matchC('IH','Engenheiro de Software Frontend','Inova Health · São Paulo, SP · R$ 10 mil','89',['React','TypeScript','Presencial'],[['Hard skills',92],['Senioridade',88],['Localização',78],['Salário',80]],'Candidatar-se')
-   +'</div></div>'
+   +'<div class="card"><div class="pad"><div class="sec-h"><h3>Suas melhores recomendações</h3><span class="muted">Match IA explicável</span></div><div id="recBox"><p class="muted">Carregando…</p></div></div></div>'
   +'</div><div class="stack">'
-   +'<div class="card"><div class="pad"><h3 style="margin-bottom:14px">Perfil Completo</h3><div class="ring-wrap"><div class="ring" style="--p:92"><div class="hole"><b>92%</b><span>completo</span></div></div><div class="muted">Perfis 100% completos recebem <b style="color:var(--ink)">3× mais</b> visualizações.</div></div></div></div>'
-   +'<div class="card"><div class="pad"><h3 style="margin-bottom:12px">Conquistas</h3>'
-     +'<div class="ach"><div class="em">🔥</div><div><b>Mais Procurado</b><small>Top 5% na sua área (30 dias)</small></div></div>'
-     +'<div class="ach"><div class="em">🏆</div><div><b>Perfil Completo</b><small>Quase lá — 92%</small></div></div>'
-     +'<div class="ach" style="background:linear-gradient(135deg,#1b8a4a,#12703c)"><div class="em">📈</div><div><b>Em Alta</b><small>+18% de views esta semana</small></div></div></div></div>'
-   +'<div class="card"><div class="pad"><h3 style="margin-bottom:6px">Próximos Passos</h3><p class="muted" style="margin-bottom:6px">Ordenado pelo ganho de completude</p>'
-     +'<div class="step"><div class="dot">1</div><div><b style="font-size:13px">Fazer teste de skills</b><small>Valida seu nível de React/TS</small></div><span class="g">+10%</span></div>'
-     +'<div class="step"><div class="dot">2</div><div><b style="font-size:13px">Adicionar portfólio</b><small>Link do GitHub ou site</small></div><span class="g">+5%</span></div>'
-     +'<div class="step"><div class="dot done">✓</div><div><b style="font-size:13px">Experiência adicionada</b><small>2 registros</small></div><span class="g" style="color:var(--muted)">feito</span></div></div></div>'
+   +'<div class="card"><div class="pad"><h3 style="margin-bottom:14px">Perfil Completo</h3><div class="ring-wrap"><div class="ring" id="ringPerfil" style="--p:0"><div class="hole"><b id="ringPerfilNum">—</b><span>completo</span></div></div><div class="muted">Perfis 100% completos recebem <b style="color:var(--ink)">3× mais</b> visualizações.</div></div></div></div>'
+   +'<div class="card"><div class="pad"><h3 style="margin-bottom:12px">Conquistas</h3><div id="achBox"><p class="muted">—</p></div></div></div>'
+   +'<div class="card"><div class="pad"><h3 style="margin-bottom:6px">Próximos Passos</h3><p class="muted" style="margin-bottom:6px">Ordenado pelo ganho de completude</p><div id="stepsBox"><p class="muted">—</p></div></div></div>'
   +'</div></div></div>';},
 
  perfil:function(){return page('Meu Perfil','Gerencie suas informações pessoais e profissionais.','<button class="btn primary" id="btnSaveProfile">Salvar Alterações</button>',
@@ -602,14 +638,14 @@ var PAGES_C={
 };
 
 var PAGES_E={
- dashboard:function(){return '<div class="wrap">'
-  +'<div class="page-h"><div><h1>Olá, TechCorp Brasil 👋</h1><p>Aqui está o resumo da sua busca por talentos.</p></div>'
+ dashboard:function(){var nome=((VZ.user&&VZ.user.nome)||'sua empresa');return '<div class="wrap">'
+  +'<div class="page-h"><div><h1>Olá, '+nome+' 👋</h1><p>Aqui está o resumo da sua busca por talentos.</p></div>'
   +'<div style="display:flex;gap:10px"><button class="btn orange" onclick="navTo(\'financeiro\')">✦ Comprar Vezus</button><button class="btn dark" onclick="navTo(\'buscar\')">⌕ Buscar Talentos</button></div></div>'
   +'<div class="grid kpis">'
-   +kpi('i-orange','⚡','145','Saldo de Vezus',['','32 consumidos no mês'])
-   +kpi('i-blue','◎','3.4K','Visualizações das vagas',['up','▲ 12%'])
-   +kpi('i-purple','👥','842','Candidatos',['up','▲ 45 novos'])
-   +kpi('i-pink','◈','156','Matches da IA',['','gerados este mês'])
+   +kpi('i-orange','⚡','—','Saldo de Vezus','','keSaldo')
+   +kpi('i-blue','◎','—','Visualizações das vagas','','keViews')
+   +kpi('i-purple','👥','—','Candidatos','','keCand')
+   +kpi('i-pink','◈','—','Matches da IA','','keMatches')
   +'</div>'
   +'<div class="cols" style="margin-top:16px"><div class="stack">'
    +'<div class="card"><div class="pad"><div class="sec-h"><h3>Contratações por Mês</h3><span class="muted">Ritmo de crescimento do time</span></div><div id="barChart"></div></div></div>'
@@ -622,12 +658,8 @@ var PAGES_E={
    +'</div></div>'
   +'</div><div class="stack">'
    +'<div class="card"><div class="pad"><h3 style="margin-bottom:6px">ROI dos Vezus</h3><p class="muted" style="margin-bottom:4px">O que o Indeed não mostra com clareza</p><div class="roi"><div><b>16</b><span>Vezus / contratação</span></div><div><b>12,5%</b><span>desbloqueio → contrat.</span></div><div><b>R$ 80</b><span>custo / contratação</span></div></div></div></div>'
-   +'<div class="card"><div class="pad"><h3 style="margin-bottom:6px">Saldo de Vezus</h3><div style="display:flex;align-items:center;gap:14px;margin:8px 0 4px"><div class="ring" style="--p:82;--c:var(--orange)"><div class="hole"><b>145</b><span>Vezus</span></div></div><div class="muted">Consumo mensal <b style="color:var(--ink)">32 Vezus</b>. No ritmo atual, dura <b style="color:var(--ink)">~4,5 meses</b>.</div></div><button class="btn orange block" style="margin-top:8px" onclick="navTo(\'financeiro\')">Comprar pacote Growth</button></div></div>'
-   +'<div class="card"><div class="pad"><h3 style="margin-bottom:8px">Feed de Atividades</h3>'
-     +feed('i-pink','◈','Novo match encontrado','A IA achou 3 perfis p/ Dev React · há 2h')
-     +feed('i-green','✎','Candidato respondeu','Ana Costa respondeu sua mensagem · há 5h')
-     +feed('i-blue','◎','Perfil visualizado','Sua vaga foi vista por 45 candidatos · hoje')
-     +feed('i-orange','⚡','Vezus consumidos','Você usou 3 Vezus p/ desbloquear contatos')+'</div></div>'
+   +'<div class="card"><div class="pad"><h3 style="margin-bottom:6px">Saldo de Vezus</h3><div style="display:flex;align-items:center;gap:14px;margin:8px 0 4px"><div class="ring" id="ringSaldo" style="--p:50;--c:var(--orange)"><div class="hole"><b id="ringSaldoNum">—</b><span>Vezus</span></div></div><div class="muted" id="saldoDesc">Consumo mensal registrado em tempo real.</div></div><button class="btn orange block" style="margin-top:8px" onclick="navTo(\'financeiro\')">Comprar pacote Growth</button></div></div>'
+   +'<div class="card"><div class="pad"><h3 style="margin-bottom:8px">Feed de Atividades</h3><div id="feedBox"><p class="muted">Sem atividades ainda.</p></div></div></div>'
   +'</div></div></div>';},
 
  buscar:function(){return page('Buscar Talentos','Encontre os melhores profissionais para sua empresa.','',
@@ -736,26 +768,31 @@ function chatUI(name,status,msgs,c1,c2){var m=msgs.map(function(x){return '<div 
    +'<div class="compose"><input class="inp2" style="flex:1" placeholder="Escreva sua mensagem…"><button class="btn primary">➤</button></div></div></div></div>';}
 
 /* ---------- charts ---------- */
-function drawCharts(){
-  var lc=document.getElementById('lineChart');
-  if(lc){var data=[12,18,22,30,38,44,60],w=560,h=180,pad=28,max=60;
-    var x=function(i){return pad+i*((w-pad*2)/(data.length-1));}, y=function(v){return h-pad-(v/max)*(h-pad*2);};
-    var d='',days=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'],grid='',dots='',labs='';
-    data.forEach(function(v,i){d+=(i?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1)+' ';});
-    var area='M'+x(0)+' '+(h-pad)+' '+data.map(function(v,i){return 'L'+x(i).toFixed(1)+' '+y(v).toFixed(1);}).join(' ')+' L'+x(data.length-1)+' '+(h-pad)+' Z';
-    [0,15,30,45,60].forEach(function(g){var gy=y(g);grid+='<line x1="'+pad+'" y1="'+gy+'" x2="'+(w-pad)+'" y2="'+gy+'" stroke="#eef1f7"/><text x="6" y="'+(gy+3)+'" font-size="9" fill="#9aa2b1">'+g+'</text>';});
-    data.forEach(function(v,i){dots+='<circle cx="'+x(i)+'" cy="'+y(v)+'" r="4" fill="#fff" stroke="#2563eb" stroke-width="2"/>';labs+='<text x="'+x(i)+'" y="'+(h-8)+'" font-size="10" fill="#9aa2b1" text-anchor="middle">'+days[i]+'</text>';});
-    lc.innerHTML='<svg viewBox="0 0 '+w+' '+h+'" width="100%" role="img" aria-label="Visualizações por dia"><defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b82f6" stop-opacity=".18"/><stop offset="1" stop-color="#3b82f6" stop-opacity="0"/></linearGradient></defs>'+grid+'<path d="'+area+'" fill="url(#g1)"/><path d="'+d+'" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linejoin="round"/>'+dots+labs+'</svg>';
-  }
-  var bc=document.getElementById('barChart');
-  if(bc){var data=[['Jan',2],['Fev',4],['Mar',5],['Abr',7],['Mai',5],['Jun',8]],w=560,h=190,pad=30,max=8,bw=42;
-    var x=function(i){return pad+i*((w-pad*2)/data.length)+((w-pad*2)/data.length-bw)/2;}, y=function(v){return h-pad-(v/max)*(h-pad*2);};
-    var grid='',bars='';
-    [0,2,4,6,8].forEach(function(g){var gy=y(g);grid+='<line x1="'+pad+'" y1="'+gy+'" x2="'+(w-pad)+'" y2="'+gy+'" stroke="#eef1f7"/><text x="8" y="'+(gy+3)+'" font-size="9" fill="#9aa2b1">'+g+'</text>';});
-    data.forEach(function(dd,i){var bh=(dd[1]/max)*(h-pad*2);bars+='<rect x="'+x(i)+'" y="'+y(dd[1])+'" width="'+bw+'" height="'+bh+'" rx="6" fill="#1e40af"/><text x="'+(x(i)+bw/2)+'" y="'+(y(dd[1])-6)+'" font-size="11" font-weight="700" fill="#1e40af" text-anchor="middle">'+dd[1]+'</text><text x="'+(x(i)+bw/2)+'" y="'+(h-8)+'" font-size="10" fill="#9aa2b1" text-anchor="middle">'+dd[0]+'</text>';});
-    bc.innerHTML='<svg viewBox="0 0 '+w+' '+h+'" width="100%" role="img" aria-label="Contratações por mês">'+grid+bars+'</svg>';
-  }
+function drawLine(data,labels){
+  var lc=document.getElementById('lineChart'); if(!lc) return;
+  data=(data&&data.length)?data:[0,0,0,0,0,0,0];
+  var w=560,h=180,pad=28,n=data.length,max=Math.max.apply(null,data); if(max<10) max=10;
+  var x=function(i){return pad+i*((w-pad*2)/Math.max(1,n-1));}, y=function(v){return h-pad-(v/max)*(h-pad*2);};
+  labels=labels||(n===7?['Seg','Ter','Qua','Qui','Sex','Sáb','Dom']:data.map(function(_,i){return i+1;}));
+  var d='',grid='',dots='',labs='';
+  data.forEach(function(v,i){d+=(i?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1)+' ';});
+  var area='M'+x(0)+' '+(h-pad)+' '+data.map(function(v,i){return 'L'+x(i).toFixed(1)+' '+y(v).toFixed(1);}).join(' ')+' L'+x(n-1)+' '+(h-pad)+' Z';
+  [0,.25,.5,.75,1].forEach(function(f){var gv=Math.round(max*f),gy=y(gv);grid+='<line x1="'+pad+'" y1="'+gy+'" x2="'+(w-pad)+'" y2="'+gy+'" stroke="#eef1f7"/><text x="6" y="'+(gy+3)+'" font-size="9" fill="#9aa2b1">'+gv+'</text>';});
+  data.forEach(function(v,i){dots+='<circle cx="'+x(i)+'" cy="'+y(v)+'" r="4" fill="#fff" stroke="#2563eb" stroke-width="2"/>';labs+='<text x="'+x(i)+'" y="'+(h-8)+'" font-size="10" fill="#9aa2b1" text-anchor="middle">'+labels[i]+'</text>';});
+  lc.innerHTML='<svg viewBox="0 0 '+w+' '+h+'" width="100%" role="img" aria-label="Evolução do perfil"><defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b82f6" stop-opacity=".18"/><stop offset="1" stop-color="#3b82f6" stop-opacity="0"/></linearGradient></defs>'+grid+'<path d="'+area+'" fill="url(#g1)"/><path d="'+d+'" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linejoin="round"/>'+dots+labs+'</svg>';
 }
+function drawBar(data){
+  var bc=document.getElementById('barChart'); if(!bc) return;
+  data=(data&&data.length)?data:[['—',0]];
+  var w=560,h=190,pad=30,n=data.length,bw=Math.max(16,Math.min(42,(w-pad*2)/n-10));
+  var max=Math.max.apply(null,data.map(function(d){return d[1];})); if(max<4) max=4;
+  var x=function(i){return pad+i*((w-pad*2)/n)+((w-pad*2)/n-bw)/2;}, y=function(v){return h-pad-(v/max)*(h-pad*2);};
+  var grid='',bars='';
+  [0,.25,.5,.75,1].forEach(function(f){var gv=Math.round(max*f),gy=y(gv);grid+='<line x1="'+pad+'" y1="'+gy+'" x2="'+(w-pad)+'" y2="'+gy+'" stroke="#eef1f7"/><text x="8" y="'+(gy+3)+'" font-size="9" fill="#9aa2b1">'+gv+'</text>';});
+  data.forEach(function(dd,i){var bh=(dd[1]/max)*(h-pad*2);bars+='<rect x="'+x(i)+'" y="'+y(dd[1])+'" width="'+bw+'" height="'+bh+'" rx="6" fill="#1e40af"/><text x="'+(x(i)+bw/2)+'" y="'+(y(dd[1])-6)+'" font-size="11" font-weight="700" fill="#1e40af" text-anchor="middle">'+dd[1]+'</text><text x="'+(x(i)+bw/2)+'" y="'+(h-8)+'" font-size="10" fill="#9aa2b1" text-anchor="middle">'+dd[0]+'</text>';});
+  bc.innerHTML='<svg viewBox="0 0 '+w+' '+h+'" width="100%" role="img" aria-label="Contratações por mês">'+grid+bars+'</svg>';
+}
+function drawCharts(){ drawLine(); drawBar(); }
 
 /* init */
 vzBoot();
