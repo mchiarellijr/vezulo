@@ -277,8 +277,8 @@
         <button data-r="E" onclick="pickLogin('E')">🏢 Empresa</button>
         <button data-r="A" onclick="pickLogin('A')">🔒 Admin</button>
       </div>
-      <div class="field"><label>Email</label><div class="inp"><span class="ic">✉</span><input type="email" placeholder="voce@email.com" value="joao.silva@email.com"></div></div>
-      <div class="field"><label>Senha</label><div class="inp"><span class="ic">🔒</span><input type="password" placeholder="••••••••" value="123456"></div></div>
+      <div class="field"><label>Email</label><div class="inp"><span class="ic">✉</span><input id="loginEmail" type="email" placeholder="voce@email.com"></div></div>
+      <div class="field"><label>Senha</label><div class="inp"><span class="ic">🔒</span><input id="loginSenha" type="password" placeholder="••••••••"></div></div>
       <div class="row-between"><span></span><button class="link" onclick="alertMsg('Fluxo “Esqueci minha senha” — protótipo')">Esqueci minha senha</button></div>
       <button class="btn primary block lg" onclick="doLogin()">Entrar</button>
       <div id="adminNote" class="note hidden" style="margin-top:14px">🔒 Painel administrativo — em desenvolvimento (Fase 3).</div>
@@ -351,12 +351,40 @@ function alertMsg(m){ var n=document.createElement('div'); n.textContent=m;
   n.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#0f1e46;color:#fff;padding:12px 18px;border-radius:12px;font-size:13px;z-index:99;box-shadow:0 10px 30px rgba(0,0,0,.25)';
   document.body.appendChild(n); setTimeout(function(){n.remove();},1900); }
 
+/* ============ API + SESSÃO ============ */
+var API_BASE='https://vezulo.com.br/wp-json/vezulo/v1';
+var VZ={
+  get token(){return localStorage.getItem('vz_token');},
+  set token(t){t?localStorage.setItem('vz_token',t):localStorage.removeItem('vz_token');},
+  get user(){try{return JSON.parse(localStorage.getItem('vz_user')||'null');}catch(e){return null;}},
+  set user(u){u?localStorage.setItem('vz_user',JSON.stringify(u)):localStorage.removeItem('vz_user');}
+};
+function api(path,opts){opts=opts||{};
+  var headers={'Content-Type':'application/json'};
+  if(opts.auth!==false && VZ.token){ headers['Authorization']='Bearer '+VZ.token; }
+  return fetch(API_BASE+path,{method:opts.method||'GET',headers:headers,body:opts.body?JSON.stringify(opts.body):null})
+    .then(function(res){return res.json().catch(function(){return null;}).then(function(data){
+      if(!res.ok){ throw new Error((data&&data.message)||('Erro '+res.status)); }
+      return data;
+    });});
+}
+function roleToCode(r){return r==='empresa'?'E':'C';}
+function val(id){var el=document.getElementById(id);return el?el.value:'';}
+
 /* ---- login ---- */
 function pickLogin(r){ state.loginRole=r;
   document.querySelectorAll('#loginTabs button').forEach(function(b){b.classList.toggle('on',b.dataset.r===r); b.classList.toggle('dark',r==='A'&&b.dataset.r==='A');});
   document.getElementById('adminNote').classList.toggle('hidden', r!=='A');
 }
-function doLogin(){ if(state.loginRole==='A'){ alertMsg('Painel admin em desenvolvimento (Fase 3).'); return; } enterApp(state.loginRole); }
+function doLogin(){
+  if(state.loginRole==='A'){ alertMsg('Painel admin em desenvolvimento (Fase 3).'); return; }
+  var email=(val('loginEmail')||'').trim(), senha=val('loginSenha')||'';
+  if(!email||!senha){ alertMsg('Preencha e-mail e senha.'); return; }
+  alertMsg('Entrando…');
+  api('/auth/login',{method:'POST',auth:false,body:{email:email,senha:senha}})
+    .then(function(d){ VZ.token=d.token; VZ.user=d.user; enterApp(roleToCode(d.user.role)); })
+    .catch(function(e){ alertMsg(e.message); });
+}
 
 /* ---- signup ---- */
 function signupAs(r){ state.signupRole=r; go('signup'); pickSignup(r); }
@@ -367,32 +395,51 @@ function pickSignup(r){ state.signupRole=r;
 function renderSignupFields(){
   var r=state.signupRole, h='';
   if(r==='C'){
-    h='<div class="field"><label>Nome completo</label><div class="inp"><span class="ic">👤</span><input placeholder="Seu nome"></div></div>'
-     +'<div class="field"><label>Email</label><div class="inp"><span class="ic">✉</span><input placeholder="voce@email.com"></div></div>'
-     +'<div class="field"><label>Telefone</label><div class="inp"><span class="ic">📱</span><input placeholder="(11) 90000-0000"></div></div>'
-     +'<div class="field"><label>Senha</label><div class="inp"><span class="ic">🔒</span><input type="password" placeholder="••••••••"></div></div>';
+    h='<div class="field"><label>Nome completo</label><div class="inp"><span class="ic">👤</span><input id="suNome" placeholder="Seu nome"></div></div>'
+     +'<div class="field"><label>Email</label><div class="inp"><span class="ic">✉</span><input id="suEmail" placeholder="voce@email.com"></div></div>'
+     +'<div class="field"><label>Telefone</label><div class="inp"><span class="ic">📱</span><input id="suTel" placeholder="(11) 90000-0000"></div></div>'
+     +'<div class="field"><label>Senha</label><div class="inp"><span class="ic">🔒</span><input id="suSenha" type="password" placeholder="mínimo 6 caracteres"></div></div>';
   } else {
-    h='<div class="field"><label>Razão social</label><div class="inp"><span class="ic">🏢</span><input placeholder="Sua empresa Ltda"></div></div>'
-     +'<div class="field"><label>CNPJ</label><div class="inp"><span class="ic">🆔</span><input placeholder="00.000.000/0001-00"></div></div>'
-     +'<div class="field"><label>Email corporativo</label><div class="inp"><span class="ic">✉</span><input placeholder="rh@empresa.com.br"></div></div>'
-     +'<div class="field"><label>Senha</label><div class="inp"><span class="ic">🔒</span><input type="password" placeholder="••••••••"></div></div>';
+    h='<div class="field"><label>Razão social</label><div class="inp"><span class="ic">🏢</span><input id="suNome" placeholder="Sua empresa Ltda"></div></div>'
+     +'<div class="field"><label>CNPJ</label><div class="inp"><span class="ic">🆔</span><input id="suCnpj" placeholder="00.000.000/0001-00"></div></div>'
+     +'<div class="field"><label>Email corporativo</label><div class="inp"><span class="ic">✉</span><input id="suEmail" placeholder="rh@empresa.com.br"></div></div>'
+     +'<div class="field"><label>Senha</label><div class="inp"><span class="ic">🔒</span><input id="suSenha" type="password" placeholder="mínimo 6 caracteres"></div></div>';
   }
   document.getElementById('signupFields').innerHTML=h;
 }
-function doSignup(){ enterApp(state.signupRole); }
+function doSignup(){
+  var r=state.signupRole;
+  var nome=(val('suNome')||'').trim(), email=(val('suEmail')||'').trim(), senha=val('suSenha')||'';
+  if(!nome||!email||senha.length<6){ alertMsg('Preencha nome, e-mail e senha (mín. 6 caracteres).'); return; }
+  var body={role:(r==='E'?'empresa':'candidato'),nome:nome,email:email,senha:senha};
+  if(r==='C'){ body.telefone=val('suTel')||''; } else { body.cnpj=val('suCnpj')||''; }
+  alertMsg('Criando sua conta…');
+  api('/auth/register',{method:'POST',auth:false,body:body})
+    .then(function(d){ VZ.token=d.token; VZ.user=d.user; enterApp(roleToCode(d.user.role)); })
+    .catch(function(e){ alertMsg(e.message); });
+}
 
 /* ---- app ---- */
 function enterApp(role){
   state.role=role; state.page='dashboard';
   document.getElementById('vezusPill').classList.toggle('hidden', role!=='E');
+  var u=VZ.user||{}, nome=u.nome||(role==='E'?'Empresa':'Candidato');
   var av=document.getElementById('avatarTop');
-  av.textContent = role==='E'?'T':'J';
+  av.textContent=((nome.trim()[0])||'V').toUpperCase();
   av.style.borderRadius = role==='E'?'11px':'50%';
-  document.getElementById('whoName').textContent = role==='E'?'TechCorp Brasil':'João Silva';
+  document.getElementById('whoName').textContent = nome;
   document.getElementById('whoRole').textContent = role==='E'?'Empresa':'Candidato';
+  if(role==='E'){ api('/vezus/balance').then(function(b){ var p=document.getElementById('vezusPill'); if(p&&b){ p.innerHTML='<span class="v">V</span> '+b.saldo+' Vezus'; } }).catch(function(){}); }
   buildNav(); renderPage(); go('app');
 }
-function logout(){ go('landing'); }
+function logout(){ VZ.token=null; VZ.user=null; go('landing'); }
+function vzBoot(){
+  renderSignupFields();
+  if(VZ.token && VZ.user){
+    api('/auth/me').then(function(me){ VZ.user=me; enterApp(roleToCode(me.role)); })
+      .catch(function(){ VZ.token=null; VZ.user=null; go('landing'); });
+  } else { go('landing'); }
+}
 
 var NAV_C=[['dashboard','▦','Dashboard'],['perfil','◎','Meu Perfil'],['curriculo','▤','Meu Currículo'],['experiencias','⬒','Experiências'],['formacao','◑','Formação'],['habilidades','◈','Habilidades'],['vagas','✦','Vagas Recomendadas'],['empresas','▣','Empresas Interessadas'],['mensagens','✎','Mensagens'],['certificados','❏','Certificados'],['config','⚙','Configurações']];
 var NAV_E=[['dashboard','▦','Dashboard'],['buscar','⌕','Buscar Talentos'],['vagas','⬒','Vagas'],['match','◈','Match Inteligente'],['favoritos','★','Candidatos Favoritos'],['banco','❏','Banco de Currículos'],['mensagens','✎','Mensagens'],['financeiro','$','Financeiro'],['perfil','◎','Meu Perfil'],['config','⚙','Configurações']];
@@ -410,6 +457,49 @@ function renderPage(){
   var fn = (state.role==='E'?PAGES_E:PAGES_C)[state.page];
   document.getElementById('pageContent').innerHTML = fn ? fn() : '<div class="wrap"><div class="card"><div class="pad">Página em construção.</div></div></div>';
   if(state.page==='dashboard') drawCharts();
+  vzHydrate();
+}
+
+/* ============ HIDRATAÇÃO (dados reais da API) ============ */
+function setVal(id,v){var el=document.getElementById(id); if(el){el.value=(v==null?'':v);}}
+function vzHydrate(){
+  try{
+    if(state.page!=='perfil') return;
+    if(state.role==='C') hydrateCandidateProfile(); else hydrateCompanyProfile();
+  }catch(e){}
+}
+function hydrateCandidateProfile(){
+  var u=VZ.user||{}; setVal('pEmail', u.email);
+  api('/candidate/profile').then(function(p){
+    setVal('pNome',p.nome); setVal('pCargo',p.cargo_desejado); setVal('pTel',p.telefone);
+    setVal('pCidade',p.cidade); setVal('pLinkedin',p.linkedin); setVal('pResumo',p.resumo);
+  }).catch(function(){});
+  var btn=document.getElementById('btnSaveProfile');
+  if(btn) btn.onclick=function(){
+    api('/candidate/profile',{method:'PUT',body:{
+      nome:val('pNome'),cargo_desejado:val('pCargo'),telefone:val('pTel'),
+      cidade:val('pCidade'),linkedin:val('pLinkedin'),resumo:val('pResumo')
+    }}).then(function(p){
+      var u=VZ.user; if(u){u.nome=val('pNome'); VZ.user=u; document.getElementById('whoName').textContent=u.nome;}
+      alertMsg('Perfil salvo! ✓ Completude: '+(p.completude||0)+'%');
+    }).catch(function(e){ alertMsg(e.message); });
+  };
+}
+function hydrateCompanyProfile(){
+  api('/company/profile').then(function(p){
+    setVal('cRazao',p.razao_social); setVal('cCnpj',p.cnpj); setVal('cSegmento',p.segmento);
+    setVal('cTamanho',p.tamanho); setVal('cWebsite',p.website); setVal('cLinkedin',p.linkedin);
+  }).catch(function(){});
+  var btn=document.getElementById('btnSaveProfile');
+  if(btn) btn.onclick=function(){
+    api('/company/profile',{method:'PUT',body:{
+      razao_social:val('cRazao'),segmento:val('cSegmento'),tamanho:val('cTamanho'),
+      website:val('cWebsite'),linkedin:val('cLinkedin')
+    }}).then(function(p){
+      var u=VZ.user; if(u){u.nome=val('cRazao'); VZ.user=u; document.getElementById('whoName').textContent=u.nome;}
+      alertMsg('Perfil da empresa salvo! ✓');
+    }).catch(function(e){ alertMsg(e.message); });
+  };
 }
 </script>
 
@@ -449,14 +539,14 @@ var PAGES_C={
      +'<div class="step"><div class="dot done">✓</div><div><b style="font-size:13px">Experiência adicionada</b><small>2 registros</small></div><span class="g" style="color:var(--muted)">feito</span></div></div></div>'
   +'</div></div></div>';},
 
- perfil:function(){return page('Meu Perfil','Gerencie suas informações pessoais e profissionais.','<button class="btn primary">Salvar Alterações</button>',
+ perfil:function(){return page('Meu Perfil','Gerencie suas informações pessoais e profissionais.','<button class="btn primary" id="btnSaveProfile">Salvar Alterações</button>',
   '<div class="card"><div class="pad">'
-  +'<div style="display:flex;gap:16px;align-items:center;margin-bottom:22px"><div class="avatar" style="width:64px;height:64px;font-size:20px">JS</div><button class="btn ghost">Alterar Foto</button></div>'
+  +'<div style="display:flex;gap:16px;align-items:center;margin-bottom:22px"><div class="avatar" style="width:64px;height:64px;font-size:20px" id="avatarProfile">'+(((VZ.user&&VZ.user.nome)||'V').trim()[0]||'V').toUpperCase()+'</div><button class="btn ghost">Alterar Foto</button></div>'
   +'<div class="formgrid">'
-   +fld('Nome Completo','João Silva')+fld('Cargo Desejado','Desenvolvedor Frontend Sênior')
-   +fld('Email','joao.silva@email.com')+fld('Telefone','(11) 98765-4321')
-   +fld('Cidade / Estado','São Paulo, SP')+fld('LinkedIn','linkedin.com/in/joaosilva')
-   +'<div class="full"><label class="lbl">Resumo Profissional</label><textarea class="inp2">Profissional com mais de 5 anos de experiência na criação de interfaces web modernas e escaláveis. Especialista em React e ecossistema JavaScript, focado em performance, acessibilidade e experiência do usuário.</textarea></div>'
+   +fldI('pNome','Nome Completo')+fldI('pCargo','Cargo Desejado')
+   +fldIRO('pEmail','Email')+fldI('pTel','Telefone')
+   +fldI('pCidade','Cidade / Estado')+fldI('pLinkedin','LinkedIn')
+   +'<div class="full"><label class="lbl">Resumo Profissional</label><textarea class="inp2" id="pResumo" placeholder="Conte sua trajetória, especialidades e o que você busca…"></textarea></div>'
   +'</div></div></div>');},
 
  curriculo:function(){return page('Meu Currículo','Visualize como as empresas veem seu perfil.','<div style="display:flex;gap:10px"><button class="btn ghost">⬇ Baixar PDF</button><button class="btn dark">✦ Gerar currículo com IA</button></div>',
@@ -593,13 +683,13 @@ var PAGES_E={
    +'<div class="card"><div class="pad"><h3 style="margin-bottom:6px">ROI</h3><div class="roi"><div><b>16</b><span>Vezus / contratação</span></div><div><b>12,5%</b><span>conversão</span></div><div><b>R$ 80</b><span>custo / contrat.</span></div></div></div></div>'
   +'</div></div>');},
 
- perfil:function(){return page('Meu Perfil da Empresa','Gerencie as informações da sua empresa visíveis para os candidatos.','<button class="btn primary">Salvar Alterações</button>',
+ perfil:function(){return page('Meu Perfil da Empresa','Gerencie as informações da sua empresa visíveis para os candidatos.','<button class="btn primary" id="btnSaveProfile">Salvar Alterações</button>',
   '<div class="card"><div class="pad">'
-  +'<div style="display:flex;gap:16px;align-items:center;margin-bottom:8px"><div class="avatar" style="width:64px;height:64px;font-size:20px;border-radius:14px">TC</div><div><div style="display:flex;align-items:center;gap:10px"><h2 style="font-size:20px">TechCorp Brasil</h2><span class="verified">✓ Verificada</span></div><div class="muted">Tecnologia da Informação · ◎ São Paulo, SP · 👥 100–500 funcionários</div></div></div>'
+  +'<div style="display:flex;gap:16px;align-items:center;margin-bottom:8px"><div class="avatar" style="width:64px;height:64px;font-size:20px;border-radius:14px">'+(((VZ.user&&VZ.user.nome)||'V').trim()[0]||'V').toUpperCase()+'</div><div><h2 style="font-size:20px">'+((VZ.user&&VZ.user.nome)||'Sua empresa')+'</h2><div class="muted">Complete o perfil para os candidatos te encontrarem.</div></div></div>'
   +'<div class="formgrid" style="margin-top:18px">'
-   +fld('Razão Social','TechCorp Soluções em TI Ltda')+fldRO('CNPJ','12.345.678/0001-90')
-   +fld('Segmento','Tecnologia da Informação')+fld('Tamanho da Empresa','100–500 funcionários')
-   +fld('Website','https://www.techcorp.com.br')+fld('LinkedIn','linkedin.com/company/techcorp')
+   +fldI('cRazao','Razão Social')+fldIRO('cCnpj','CNPJ')
+   +fldI('cSegmento','Segmento')+fldI('cTamanho','Tamanho da Empresa')
+   +fldI('cWebsite','Website')+fldI('cLinkedin','LinkedIn')
   +'</div></div></div>');},
 
  config:function(){return page('Configurações','Gerencie preferências, notificações e segurança da conta.','',
@@ -617,6 +707,8 @@ var PAGES_E={
 /* ---------- small builders ---------- */
 function page(title,sub,actions,body){return '<div class="wrap"><div class="page-h"><div><h1>'+title+'</h1><p>'+sub+'</p></div><div style="display:flex;gap:10px">'+(actions||'')+'</div></div>'+body+'</div>';}
 function fld(l,v){return '<div><label class="lbl">'+l+'</label><input class="inp2" value="'+v+'"></div>';}
+function fldI(id,l){return '<div><label class="lbl">'+l+'</label><input class="inp2" id="'+id+'"></div>';}
+function fldIRO(id,l){return '<div><label class="lbl">'+l+' <span class="muted">(somente leitura)</span></label><input class="inp2" id="'+id+'" disabled style="background:var(--bg);color:var(--muted)"></div>';}
 function fldRO(l,v){return '<div><label class="lbl">'+l+' <span class="muted">(somente leitura)</span></label><input class="inp2" value="'+v+'" disabled style="background:var(--bg);color:var(--muted)"></div>';}
 function skill(n,p){return '<div class="skillbar"><span>'+n+'</span><div class="bar"><i style="width:'+p+'%"></i></div><b style="text-align:right">'+p+'%</b></div>';}
 function exp(role,org,when,items){return '<div class="listcard"><div class="li">⬒</div><div><h4>'+role+'</h4><div class="meta">'+org+' · '+when+'</div>'+(items.length?'<ul>'+items.map(function(i){return '<li>'+i+'</li>';}).join('')+'</ul>':'')+'</div><div class="actions"><button class="icobtn">✎</button><button class="icobtn">🗑</button></div></div>';}
@@ -666,7 +758,7 @@ function drawCharts(){
 }
 
 /* init */
-renderSignupFields();
+vzBoot();
 </script>
 </body>
 </html>
