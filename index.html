@@ -462,12 +462,126 @@ function renderPage(){
 
 /* ============ HIDRATAÇÃO (dados reais da API) ============ */
 function setVal(id,v){var el=document.getElementById(id); if(el){el.value=(v==null?'':v);}}
+function esc(s){return (s==null?'':String(s)).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function vzHydrate(){
   try{
-    if(state.page==='dashboard'){ if(state.role==='C') hydrateCandidateDashboard(); else hydrateCompanyDashboard(); return; }
-    if(state.page==='perfil'){ if(state.role==='C') hydrateCandidateProfile(); else hydrateCompanyProfile(); return; }
+    if(state.role==='C'){
+      if(state.page==='dashboard') return hydrateCandidateDashboard();
+      if(state.page==='perfil') return hydrateCandidateProfile();
+      if(state.page==='experiencias'||state.page==='formacao'||state.page==='certificados') return hydrateCollection(state.page);
+      if(state.page==='habilidades') return hydrateHabilidades();
+      if(state.page==='vagas') return hydrateCandidateVagas();
+    } else {
+      if(state.page==='dashboard') return hydrateCompanyDashboard();
+      if(state.page==='perfil') return hydrateCompanyProfile();
+      if(state.page==='vagas') return hydrateCompanyVagas();
+    }
   }catch(e){}
 }
+
+/* ---- CRUD genérico do currículo (experiências, formação, certificados) ---- */
+var COLL={
+  experiencias:{ep:'/candidate/experience',key:'cargo',fields:[['cargo','Cargo'],['empresa','Empresa'],['inicio','Início (ex: Jan 2021)'],['fim','Fim (ex: Presente)'],['descricao','Descrição','ta']]},
+  formacao:{ep:'/candidate/education',key:'curso',fields:[['curso','Curso'],['instituicao','Instituição'],['nivel','Nível (ex: Graduação)'],['ano_conclusao','Ano de conclusão']]},
+  certificados:{ep:'/candidate/certifications',key:'nome',fields:[['nome','Nome'],['emissor','Emissor'],['data','Data (ex: Jan 2024)'],['url','Link (URL)']]}
+};
+function collFormToggle(){var f=document.getElementById('collForm'); if(f) f.style.display=(f.style.display==='none'?'block':'none');}
+function hydrateCollection(page){
+  var cfg=COLL[page], fb=document.getElementById('collFormBody');
+  if(fb){ fb.innerHTML='<h3 style="margin-bottom:10px">Novo registro</h3><div class="formgrid">'
+    +cfg.fields.map(function(f){var id='cf_'+f[0];return f[2]==='ta'
+      ?'<div class="full"><label class="lbl">'+f[1]+'</label><textarea class="inp2" id="'+id+'"></textarea></div>'
+      :'<div><label class="lbl">'+f[1]+'</label><input class="inp2" id="'+id+'"></div>';}).join('')
+    +'</div><div style="margin-top:12px;display:flex;gap:8px"><button class="btn primary" onclick="collSave(\''+page+'\')">Salvar</button><button class="btn ghost" onclick="collFormToggle()">Cancelar</button></div>'; }
+  var b=document.getElementById('collAddBtn'); if(b) b.onclick=collFormToggle;
+  collReload(page);
+}
+function collReload(page){var cfg=COLL[page];
+  api(cfg.ep).then(function(list){var box=document.getElementById('collList'); if(!box) return;
+    if(!list||!list.length){ box.innerHTML='<p class="muted">Nenhum registro ainda. Clique em “+ Adicionar”.</p>'; return; }
+    box.innerHTML=list.map(function(it){
+      var titulo=esc(it[cfg.key]||it.titulo||'Registro');
+      var meta=cfg.fields.slice(1).map(function(f){return it[f[0]];}).filter(Boolean).map(esc).join(' · ');
+      return '<div class="listcard"><div class="li">▤</div><div><h4>'+titulo+'</h4><div class="meta">'+meta+'</div></div><div class="actions"><button class="icobtn" title="Remover" onclick="collDelete(\''+page+'\','+it.id+')">🗑</button></div></div>';
+    }).join('');
+  }).catch(function(){});
+}
+function collSave(page){var cfg=COLL[page], body={};
+  cfg.fields.forEach(function(f){ body[f[0]]=val('cf_'+f[0]); });
+  if(!body[cfg.key]){ alertMsg('Preencha ao menos o campo principal.'); return; }
+  api(cfg.ep,{method:'POST',body:body}).then(function(){ collFormToggle(); alertMsg('Adicionado! ✓'); collReload(page); }).catch(function(e){ alertMsg(e.message); });
+}
+function collDelete(page,id){ if(!confirm('Remover este registro?')) return; var cfg=COLL[page];
+  api(cfg.ep+'/'+id,{method:'DELETE'}).then(function(){ alertMsg('Removido.'); collReload(page); }).catch(function(e){ alertMsg(e.message); });
+}
+
+/* ---- Habilidades ---- */
+var vzSkills={hard:[],soft:[]};
+function hydrateHabilidades(){
+  api('/candidate/skills').then(function(s){ vzSkills={hard:(s&&s.hard)||[],soft:(s&&s.soft)||[]}; renderSkills(); }).catch(function(){ renderSkills(); });
+  var b=document.getElementById('btnSaveSkills'); if(b) b.onclick=saveSkills;
+}
+function renderSkills(){
+  var hl=document.getElementById('hardList');
+  if(hl) hl.innerHTML=vzSkills.hard.length?vzSkills.hard.map(function(h,i){return '<div class="skillbar"><span>'+esc(h.nome)+'</span><div class="bar"><i style="width:'+(h.nivel||0)+'%"></i></div><span style="display:flex;gap:6px;align-items:center;justify-content:flex-end"><b>'+(h.nivel||0)+'%</b><button class="icobtn" style="width:24px;height:24px;line-height:1" onclick="skillDel(\'hard\','+i+')">×</button></span></div>';}).join(''):'<p class="muted">Nenhuma hard skill ainda.</p>';
+  var sl=document.getElementById('softList');
+  if(sl) sl.innerHTML=vzSkills.soft.length?vzSkills.soft.map(function(s,i){return '<span class="tag">'+esc(s)+' <b style="cursor:pointer" onclick="skillDel(\'soft\','+i+')">×</b></span>';}).join(''):'<p class="muted">Nenhuma soft skill ainda.</p>';
+}
+function skillAddHard(){var n=(val('hsNome')||'').trim(); if(!n) return; var lv=parseInt(val('hsNivel'),10); vzSkills.hard.push({nome:n,nivel:isNaN(lv)?70:Math.max(0,Math.min(100,lv))}); setVal('hsNome','');setVal('hsNivel',''); renderSkills();}
+function skillAddSoft(){var n=(val('ssNome')||'').trim(); if(!n) return; vzSkills.soft.push(n); setVal('ssNome',''); renderSkills();}
+function skillDel(t,i){ vzSkills[t].splice(i,1); renderSkills(); }
+function saveSkills(){ api('/candidate/skills',{method:'PUT',body:vzSkills}).then(function(){ alertMsg('Habilidades salvas! ✓'); }).catch(function(e){ alertMsg(e.message); }); }
+
+/* ---- Vagas: candidato ---- */
+function hydrateCandidateVagas(){
+  var box=document.getElementById('vagasList'); if(!box) return;
+  api('/candidate/recomendadas').then(function(list){
+    if(!list||!list.length){ box.innerHTML='<p class="muted">Ainda não há vagas disponíveis. Assim que empresas publicarem vagas, elas aparecem aqui.</p>'; return; }
+    box.innerHTML=list.map(function(v){
+      var b=v.match_breakdown||{};
+      var dims=[['Hard skills',b.skills||0],['Senioridade',b.senioridade||0],['Localização',b.local||0],['Salário',b.salario||0]];
+      var sal=v.salario_combinar?'A combinar':(v.salario_min?'R$ '+esc(v.salario_min)+(v.salario_max?'–'+esc(v.salario_max):''):'');
+      var meta='◎ '+(esc(v.modalidade)||'—')+(sal?' · '+sal:'');
+      return '<div class="card"><div class="pad"><div class="match-top"><div class="avatar">🏢</div><div class="info"><b>'+esc(v.titulo)+'</b><div class="sub">'+esc(v.empresa)+'</div></div><div class="match-badge"><b>'+(v.match||0)+'%</b><span>MATCH</span></div></div><div class="muted" style="margin:10px 0 4px">'+meta+'</div>'+whyBlock(dims)+'<button class="btn primary block" style="margin-top:12px" onclick="candidatar('+v.id+',this)">Candidatar-se</button></div></div>';
+    }).join('');
+  }).catch(function(){ box.innerHTML='<p class="muted">Não foi possível carregar as vagas.</p>'; });
+}
+function candidatar(id,btn){
+  if(btn){ btn.disabled=true; btn.textContent='Enviando…'; }
+  api('/vagas/'+id+'/candidatar',{method:'POST'}).then(function(){ if(btn){ btn.textContent='✓ Candidatura enviada'; btn.style.background='var(--green)'; } alertMsg('Candidatura enviada! 🎉'); })
+    .catch(function(e){ if(btn){ btn.disabled=false; btn.textContent='Candidatar-se'; } alertMsg(e.message); });
+}
+
+/* ---- Vagas: empresa ---- */
+function vagaFormToggle(){var f=document.getElementById('vagaForm'); if(f) f.style.display=(f.style.display==='none'?'block':'none');}
+function hydrateCompanyVagas(){
+  var fb=document.getElementById('vagaFormBody');
+  if(fb) fb.innerHTML='<h3 style="margin-bottom:10px">Publicar nova vaga</h3><div class="formgrid">'
+    +'<div class="full"><label class="lbl">Título</label><input class="inp2" id="vgTitulo" placeholder="Ex: Desenvolvedor Frontend Sênior"></div>'
+    +'<div><label class="lbl">Modalidade</label><select class="inp2" id="vgModal"><option value="remoto">Remoto</option><option value="hibrido">Híbrido</option><option value="presencial">Presencial</option></select></div>'
+    +'<div><label class="lbl">Cidade</label><input class="inp2" id="vgCidade" placeholder="Ex: São Paulo"></div>'
+    +'<div><label class="lbl">Salário mín (R$)</label><input class="inp2" id="vgSalMin" type="number"></div>'
+    +'<div><label class="lbl">Salário máx (R$)</label><input class="inp2" id="vgSalMax" type="number"></div>'
+    +'<div class="full"><label class="lbl">Descrição</label><textarea class="inp2" id="vgDesc" placeholder="Responsabilidades, requisitos, benefícios…"></textarea></div>'
+    +'</div><div style="margin-top:12px;display:flex;gap:8px"><button class="btn primary" onclick="publicarVaga()">Publicar</button><button class="btn ghost" onclick="vagaFormToggle()">Cancelar</button></div>';
+  var b=document.getElementById('vagaAddBtn'); if(b) b.onclick=vagaFormToggle;
+  reloadMyVagas();
+}
+function reloadMyVagas(){
+  api('/vagas?mine=1').then(function(list){var box=document.getElementById('myVagas'); if(!box) return;
+    if(!list||!list.length){ box.innerHTML='<p class="muted">Você ainda não publicou vagas. Clique em “+ Publicar Vaga”.</p>'; return; }
+    box.innerHTML=list.map(function(v){var st=(v.status==='pausada')?'pausada':'ativa';
+      var meta=[v.modalidade,v.cidade,(v.salario_min?'R$ '+v.salario_min+(v.salario_max?'–'+v.salario_max:''):'')].filter(Boolean).map(esc).join(' · ');
+      return '<div class="card" style="margin-bottom:12px"><div class="pad"><div style="display:flex;align-items:center;gap:10px;margin-bottom:4px"><h4 style="font-size:15px">'+esc(v.titulo)+'</h4><span class="statuspill st-'+st+'">'+(st==='ativa'?'Ativa':'Pausada')+'</span></div><div class="muted" style="margin-bottom:12px">'+(meta||'—')+'</div><div style="display:flex;gap:24px;align-items:center"><div><span class="muted">◎ Views</span><br><b style="font-size:18px">'+(v.views||0)+'</b></div><div><span class="muted">👥 Interessados</span><br><b style="font-size:18px">'+(v.interessados||0)+'</b></div><div><span class="muted">📝 Candidaturas</span><br><b style="font-size:18px">'+(v.candidaturas||0)+'</b></div><div style="margin-left:auto"><button class="icobtn" title="Remover" onclick="deleteVaga('+v.id+')">🗑</button></div></div></div></div>';
+    }).join('');
+  }).catch(function(){});
+}
+function publicarVaga(){
+  var titulo=(val('vgTitulo')||'').trim(); if(!titulo){ alertMsg('Informe o título da vaga.'); return; }
+  var body={titulo:titulo,modalidade:val('vgModal'),cidade:val('vgCidade'),salario_min:val('vgSalMin'),salario_max:val('vgSalMax'),descricao:val('vgDesc'),status:'ativa'};
+  api('/vagas',{method:'POST',body:body}).then(function(){ vagaFormToggle(); alertMsg('Vaga publicada! ✓'); reloadMyVagas(); }).catch(function(e){ alertMsg(e.message); });
+}
+function deleteVaga(id){ if(!confirm('Remover esta vaga?')) return; api('/vagas/'+id,{method:'DELETE'}).then(function(){ alertMsg('Vaga removida.'); reloadMyVagas(); }).catch(function(e){ alertMsg(e.message); }); }
 function setTxt(id,v){var el=document.getElementById(id); if(el) el.textContent=(v==null?'—':v);}
 function achCard(a){return '<div class="ach"><div class="em">🏅</div><div><b>'+(a.titulo||'')+'</b><small>'+(a.desc||'')+'</small></div></div>';}
 function stepRow(n,label,sub,ganho){return '<div class="step"><div class="dot">'+n+'</div><div><b style="font-size:13px">'+label+'</b>'+(sub?'<small>'+sub+'</small>':'')+'</div><span class="g">+'+ganho+'%</span></div>';}
@@ -592,25 +706,20 @@ var PAGES_C={
    +'<div class="muted" style="margin:16px 0 10px;text-transform:uppercase;letter-spacing:1px;font-size:11px">Soft Skills</div><div class="tags">'+['Liderança técnica','Comunicação assertiva','Resolução de problemas','Trabalho em equipe','Mentoria','Metodologias Ágeis'].map(function(s){return '<span class="tag">'+s+'</span>';}).join('')+'</div>'
   +'</div></div>');},
 
- experiencias:function(){return page('Experiências','Adicione seu histórico profissional para destacar seu perfil.','<button class="btn dark">+ Adicionar</button>',
-   exp('Desenvolvedor Frontend Sênior','TechCorp Brasil','Jan 2021 – Presente · 5 anos 5 meses',['Liderou a migração do sistema legado para React e Next.js.','Reduziu o tempo de carregamento da aplicação em 40%.','Mentoria para 3 desenvolvedores juniores.'])
-  +exp('Desenvolvedor Pleno','Agência WebBR','Fev 2018 – Dez 2020 · 2 anos 11 meses',['Desenvolvimento de landing pages de alta conversão.','Integração com APIs RESTful e GraphQL.']));},
+ experiencias:function(){return page('Experiências','Adicione seu histórico profissional para destacar seu perfil.','<button class="btn dark" id="collAddBtn">+ Adicionar</button>',
+  '<div id="collForm" class="card" style="margin-bottom:16px;display:none"><div class="pad" id="collFormBody"></div></div><div id="collList"><p class="muted">Carregando…</p></div>');},
 
- formacao:function(){return page('Formação','Sua trajetória acadêmica e cursos realizados.','<button class="btn dark">+ Adicionar</button>',
-   exp('Engenharia de Software','Universidade Tecnológica Federal do Paraná (UTFPR)','Graduação · Concluído em 2018',[]));},
+ formacao:function(){return page('Formação','Sua trajetória acadêmica e cursos realizados.','<button class="btn dark" id="collAddBtn">+ Adicionar</button>',
+  '<div id="collForm" class="card" style="margin-bottom:16px;display:none"><div class="pad" id="collFormBody"></div></div><div id="collList"><p class="muted">Carregando…</p></div>');},
 
- habilidades:function(){return page('Habilidades','Adicione e avalie suas competências técnicas e comportamentais.','',
-  '<div class="cols"><div class="card"><div class="pad"><h3 style="margin-bottom:6px">Hard Skills</h3><div class="field" style="margin:10px 0"><div class="inp"><input placeholder="Adicionar nova habilidade (ex: React, Python)…"></div></div>'
-   +skill('React / Next.js',95)+skill('TypeScript',90)+skill('Tailwind CSS',85)+skill('Node.js',75)+'</div></div>'
-  +'<div class="card"><div class="pad"><h3 style="margin-bottom:6px">Soft Skills</h3><div class="field" style="margin:10px 0"><div class="inp"><input placeholder="Adicionar soft skill…"></div></div><div class="tags">'
-   +['Liderança técnica ×','Comunicação assertiva ×','Resolução de problemas ×','Trabalho em equipe ×','Mentoria ×'].map(function(s){return '<span class="tag">'+s+'</span>';}).join('')+'</div></div></div></div>');},
+ habilidades:function(){return page('Habilidades','Adicione e avalie suas competências técnicas e comportamentais.','<button class="btn primary" id="btnSaveSkills">Salvar habilidades</button>',
+  '<div class="cols">'
+  +'<div class="card"><div class="pad"><h3 style="margin-bottom:6px">Hard Skills</h3><div style="display:flex;gap:8px;margin:10px 0"><input id="hsNome" class="inp2" placeholder="Ex: React"><input id="hsNivel" class="inp2" type="number" min="0" max="100" placeholder="Nível %" style="max-width:120px"><button class="btn ghost" onclick="skillAddHard()">+</button></div><div id="hardList"><p class="muted">Carregando…</p></div></div></div>'
+  +'<div class="card"><div class="pad"><h3 style="margin-bottom:6px">Soft Skills</h3><div style="display:flex;gap:8px;margin:10px 0"><input id="ssNome" class="inp2" placeholder="Ex: Comunicação assertiva"><button class="btn ghost" onclick="skillAddSoft()">+</button></div><div id="softList" class="tags"></div></div></div>'
+  +'</div>');},
 
  vagas:function(){return page('Vagas Recomendadas','Vagas selecionadas pela nossa IA com base no seu perfil.','',
-   '<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(320px,1fr))">'
-   +vagaCard('Desenvolvedor Frontend Sênior','TechCorp Brasil','◎ Remoto · $ R$ 12.000 – 15.000','95',[['Hard skills',96],['Senioridade',90],['Localização',100],['Salário',85]])
-   +vagaCard('Engenheiro de Software Frontend','Inova Health','◎ São Paulo, SP · $ R$ 10.000','89',[['Hard skills',92],['Senioridade',88],['Localização',78],['Salário',80]])
-   +vagaCard('Especialista React','Global Logistics','◎ Híbrido · $ A combinar','82',[['Hard skills',90],['Senioridade',80],['Localização',72],['Salário',70]])
-   +'</div>');},
+  '<div id="vagasList" class="grid" style="grid-template-columns:repeat(auto-fill,minmax(320px,1fr))"><p class="muted">Carregando…</p></div>');},
 
  empresas:function(){return page('Empresas Interessadas','Empresas que visualizaram seu perfil recentemente.','',
    intCard('TC','TechCorp Brasil','◎ São Paulo, SP','Visualizou seu perfil hoje')
@@ -621,10 +730,8 @@ var PAGES_C={
     ['them','Olá João! Vimos o seu perfil e achamos que você tem fit com nossa vaga de Sênior. Tem disponibilidade para batermos um papo?'],
     ['me','Olá! Tenho sim. Podemos agendar para amanhã à tarde?']],['Recrutador TechCorp','TechCorp Brasil','Olá João! Tudo bem?'],['RH Inova','Inova Health','Obrigado pelo seu tempo.']));},
 
- certificados:function(){return page('Certificados','Adicione licenças e certificações relevantes.','<button class="btn dark">+ Adicionar</button>',
-  '<div class="grid" style="grid-template-columns:1fr 1fr">'
-  +cert('AWS Certified Solutions Architect','Amazon Web Services','Emitido em Jan 2024 · ID AWS-12345')
-  +cert('React Advanced Patterns','Frontend Masters','Emitido em Nov 2023 · ID FM-98765')+'</div>');},
+ certificados:function(){return page('Certificados','Adicione licenças e certificações relevantes.','<button class="btn dark" id="collAddBtn">+ Adicionar</button>',
+  '<div id="collForm" class="card" style="margin-bottom:16px;display:none"><div class="pad" id="collFormBody"></div></div><div id="collList"><p class="muted">Carregando…</p></div>');},
 
  config:function(){return page('Configurações','Gerencie preferências, privacidade e segurança.','',
   '<div class="cols"><div class="card"><div class="pad"><h3 style="margin-bottom:6px">Privacidade do Perfil</h3>'
@@ -670,12 +777,8 @@ var PAGES_E={
   +talentCard('GL','Gabriela Lima','Desenvolvedora React · São Paulo, SP','92',['React','Node','✓ Verificado','🟡 Aberto a propostas'],[['Hard skills',94],['Senioridade',89],['Localização',85],['Atividade',95]],true)
   +talentCard('RM','Ricardo Melo','Analista de Marketing · Rio de Janeiro, RJ','88',['SEO','Growth','Mídia paga','✓ Verificado'],null,false));},
 
- vagas:function(){return page('Gestão de Vagas','Gerencie suas vagas abertas e acompanhe os candidatos.','<button class="btn dark">+ Publicar Vaga</button>',
-  '<div class="grid kpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">'
-   +kpi('i-blue','◎','559','Total de visualizações','')+kpi('i-purple','👥','75','Candidatos interessados','')+kpi('i-pink','◈','20','Matches realizados','')+'</div>'
-  +vagaGestao('Desenvolvedor Frontend Sênior','Remoto · R$ 12.000 – 15.000','ativa',342,45,12)
-  +vagaGestao('Farmacêutico RT','Presencial · Curitiba, PR · R$ 4.500','ativa',128,18,5)
-  +vagaGestao('Analista de Marketing Pleno','Híbrido · São Paulo, SP · R$ 6.000','pausada',89,12,3));},
+ vagas:function(){return page('Gestão de Vagas','Gerencie suas vagas abertas e acompanhe os candidatos.','<button class="btn dark" id="vagaAddBtn">+ Publicar Vaga</button>',
+  '<div id="vagaForm" class="card" style="margin-bottom:16px;display:none"><div class="pad" id="vagaFormBody"></div></div><div id="myVagas"><p class="muted">Carregando…</p></div>');},
 
  match:function(){return page('Match Inteligente','Utilize nossa IA para encontrar o perfil ideal instantaneamente.','',
   '<div class="card" style="background:linear-gradient(135deg,#1e40af,#2563eb);color:#fff;margin-bottom:16px"><div class="pad" style="text-align:center;padding:34px"><div style="font-size:34px">◈</div><h3 style="color:#fff;margin:10px 0">Descreva o profissional ideal</h3><p style="color:#cdd7f5;font-size:13px;max-width:520px;margin:0 auto 16px">Nossa IA analisa milhares de currículos em segundos para entregar os perfis com maior compatibilidade — e mostra o porquê de cada match.</p><div style="display:flex;gap:10px;max-width:620px;margin:0 auto"><input class="inp2" style="flex:1" placeholder="Ex: Procuro um farmacêutico em Curitiba com experiência em manipulação"><button class="btn orange">Gerar Ranking</button></div></div></div>'
