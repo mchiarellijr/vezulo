@@ -230,6 +230,10 @@
   .st-ativa{background:var(--green-bg);color:var(--green)} .st-pausada{background:#fff2df;color:#a55a00}
 
   /* Menu mobile (hambúrguer + gaveta) */
+  /* Modal */
+  .modal-back{display:none;position:fixed;inset:0;background:rgba(9,15,40,.5);z-index:60;padding:40px 16px;overflow:auto}
+  .modal-back.show{display:flex;align-items:flex-start;justify-content:center}
+  .modal{background:#fff;border-radius:16px;max-width:640px;width:100%;box-shadow:0 30px 80px rgba(0,0,0,.4)}
   .menu-toggle{display:none;background:none;border:0;font-size:22px;cursor:pointer;color:var(--ink);padding:4px 8px;line-height:1}
   .backdrop{display:none;position:fixed;inset:0;background:rgba(9,15,40,.45);z-index:40}
   .backdrop.show{display:block}
@@ -337,6 +341,7 @@
     <div class="side-foot"><a onclick="logout()"><span class="ic">⇥</span>Sair da conta</a></div>
   </aside>
   <div class="backdrop" id="backdrop" onclick="toggleSide(false)"></div>
+  <div class="modal-back" id="modalBack" onclick="closeModal(event)"><div class="modal" id="modalBody"></div></div>
   <div class="main">
     <div class="top">
       <button class="menu-toggle" onclick="toggleSide()" aria-label="Menu">☰</button>
@@ -648,7 +653,7 @@ function buscarTalentos(){
 }
 function renderTalent(t){
   var tags=(t.skills||[]).map(function(s){return '<span class="tag">'+esc(s)+'</span>';}).join('')+(t.disponivel?'<span class="tag">🟢 '+esc(t.disponivel)+'</span>':'');
-  var head='<div class="match-top"><div class="avatar'+(t.unlocked?'':' blur')+'">'+esc((t.nome||'?').substring(0,2))+'</div><div class="info"><b>'+esc(t.nome)+'</b><div class="sub">'+esc(t.cargo||'—')+(t.cidade?' · '+esc(t.cidade):'')+'</div></div><div class="match-badge"><b>'+(t.completude||0)+'%</b><span>PERFIL</span></div></div>';
+  var head='<div class="match-top" style="cursor:pointer" onclick="openTalento('+t.id+')" title="Ver perfil completo"><div class="avatar'+(t.unlocked?'':' blur')+'">'+esc((t.nome||'?').substring(0,2))+'</div><div class="info"><b>'+esc(t.nome)+' <span style="color:var(--blue-2);font-size:11px;font-weight:600">ver perfil ›</span></b><div class="sub">'+esc(t.cargo||'—')+(t.cidade?' · '+esc(t.cidade):'')+'</div></div><div class="match-badge"><b>'+(t.completude||0)+'%</b><span>PERFIL</span></div></div>';
   var action;
   if(t.unlocked && t.contato){
     action='<div style="margin-top:12px;padding:10px;background:var(--green-bg);border-radius:10px;font-size:13px">✓ Desbloqueado — ✉ '+esc(t.contato.email)+(t.contato.telefone?' · 📱 '+esc(t.contato.telefone):'')+'</div>'
@@ -665,7 +670,40 @@ function desbloquear(id,btn){ if(btn){btn.disabled=true;btn.textContent='Desbloq
     buscarTalentos();
   }).catch(function(e){ if(btn){btn.disabled=false;btn.textContent='🔓 Desbloquear Perfil · 1 Vezu';} alertMsg(e.message); });
 }
-function msgUser(id){ navTo('mensagens'); setTimeout(function(){ openThread(id); },350); }
+function msgUser(id){ closeModal(); navTo('mensagens'); setTimeout(function(){ openThread(id); },350); }
+
+/* ---- Modal de perfil do talento ---- */
+function openModal(html){ var b=document.getElementById('modalBody'); if(b) b.innerHTML=html; var back=document.getElementById('modalBack'); if(back) back.classList.add('show'); }
+function closeModal(e){ if(e&&e.target&&e.target.id!=='modalBack') return; var back=document.getElementById('modalBack'); if(back) back.classList.remove('show'); }
+function openTalento(id){
+  openModal('<div class="pad"><p class="muted">Carregando…</p></div>');
+  api('/company/talento/'+id).then(function(t){
+    var hard=((t.skills&&t.skills.hard)||[]).map(function(h){return skill(esc(h.nome),h.nivel||0);}).join('')||'<p class="muted">Sem hard skills.</p>';
+    var soft=((t.skills&&t.skills.soft)||[]).map(function(s){return '<span class="tag">'+esc(s)+'</span>';}).join('');
+    var exp=((t.experiencias)||[]).map(function(e){return '<div class="listcard"><div class="li">▤</div><div><h4>'+esc(e.cargo||e.titulo||'—')+'</h4><div class="meta">'+[e.empresa,e.inicio,e.fim].filter(Boolean).map(esc).join(' · ')+'</div>'+(e.descricao?'<div class="meta">'+esc(e.descricao)+'</div>':'')+'</div></div>';}).join('')||'<p class="muted">Sem experiências cadastradas.</p>';
+    var edu=((t.formacao)||[]).map(function(e){return '<div class="listcard"><div class="li">◑</div><div><h4>'+esc(e.curso||e.titulo||'—')+'</h4><div class="meta">'+[e.instituicao,e.nivel,e.ano_conclusao].filter(Boolean).map(esc).join(' · ')+'</div></div></div>';}).join('');
+    var cta = t.unlocked
+      ? '<div style="padding:12px;background:var(--green-bg);border-radius:10px;font-size:13px">✓ ✉ '+esc(t.contato.email)+(t.contato.telefone?' · 📱 '+esc(t.contato.telefone):'')+(t.contato.linkedin?' · '+esc(t.contato.linkedin):'')+'</div><div class="unlock"><button class="btn primary" style="flex:1" onclick="msgUser('+t.id+')">✉ Enviar mensagem</button></div>'
+      : '<div class="unlock"><button class="btn dark" style="flex:1" onclick="desbloquearModal('+t.id+',this)">🔓 Desbloquear Perfil · 1 Vezu</button></div>'+(t.completude>=50?'':'<p class="muted" style="margin-top:8px">Perfil ainda incompleto para desbloqueio.</p>');
+    openModal('<div class="pad">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><div style="display:flex;gap:14px;align-items:center"><div class="avatar'+(t.unlocked?'':' blur')+'" style="width:52px;height:52px;font-size:16px">'+esc((t.nome||'?').substring(0,2))+'</div><div><h2 style="font-size:20px">'+esc(t.nome)+'</h2><div class="muted">'+esc(t.cargo||'—')+(t.cidade?' · '+esc(t.cidade):'')+' · '+(t.completude||0)+'% perfil</div></div></div><button class="icobtn" onclick="closeModal()">✕</button></div>'
+      +(t.resumo?'<p style="margin:14px 0;font-size:13.5px;color:#42506e;line-height:1.6">'+esc(t.resumo)+'</p>':'')
+      +'<div style="margin:14px 0">'+cta+'</div>'
+      +'<h3 style="margin:18px 0 8px;font-size:14px">Hard Skills</h3>'+hard
+      +(soft?'<h3 style="margin:18px 0 8px;font-size:14px">Soft Skills</h3><div class="tags">'+soft+'</div>':'')
+      +'<h3 style="margin:18px 0 8px;font-size:14px">Experiências</h3>'+exp
+      +(edu?'<h3 style="margin:18px 0 8px;font-size:14px">Formação</h3>'+edu:'')
+      +'</div>');
+  }).catch(function(e){ alertMsg(e.message); closeModal(); });
+}
+function desbloquearModal(id,btn){ if(btn){btn.disabled=true;btn.textContent='Desbloqueando…';}
+  api('/company/unlock/'+id,{method:'POST'}).then(function(d){
+    var pill=document.getElementById('vezusPill'); if(pill) pill.innerHTML='<span class="v">V</span> '+d.saldo+' Vezus';
+    alertMsg('Perfil desbloqueado! Saldo: '+d.saldo+' Vezus');
+    openTalento(id);
+    if(state.page==='buscar') buscarTalentos();
+  }).catch(function(e){ if(btn){btn.disabled=false;btn.textContent='🔓 Desbloquear Perfil · 1 Vezu';} alertMsg(e.message); });
+}
 
 /* ---- Mensagens ---- */
 var vzChat={other:null};
