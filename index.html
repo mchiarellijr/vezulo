@@ -3,20 +3,25 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Vezulo — Protótipo navegável</title>
+<title>Vezulo — Conexões inteligentes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --navy:#101f4e; --navy-2:#0c1738; --navy-line:#26356b;
-    --blue:#1e40af; --blue-2:#2563eb; --blue-3:#3b82f6; --blue-soft:#eaf0fe;
-    --bg:#f3f5fb; --card:#ffffff; --line:#e7ebf4;
-    --ink:#0f1e46; --muted:#6b7480; --muted-2:#9aa2b1;
-    --green:#16a34a; --green-bg:#e7f7ec;
-    --orange:#f59e0b; --orange-2:#f97316; --orange-bg:#fff2df;
-    --purple:#7c3aed; --pink:#db2777; --red:#dc2626;
-    --radius:16px; --shadow:0 1px 2px rgba(16,31,78,.04),0 8px 24px rgba(16,31,78,.06);
+    /* Identidade Vezulo — Manual de Marca v1.0 */
+    --navy:#1A1030; --navy-2:#120a24; --navy-line:#332453;
+    --blue:#4C2FBF; --blue-2:#5B3DEF; --blue-3:#9D7BFF; --blue-soft:#EEE9FF;
+    --bg:#F5F3FF; --card:#ffffff; --line:#E7E2F5;
+    --ink:#2A2340; --muted:#6B6483; --muted-2:#9A93AE;
+    --green:#22C58B; --green-bg:#E3F8EF;
+    --orange:#E0A23C; --orange-2:#D98E2B; --orange-bg:#FBF1DF;
+    --purple:#6D4AEF; --pink:#B24AC9; --red:#E0457F;
+    --radius:16px; --shadow:0 1px 2px rgba(26,16,48,.05),0 10px 26px rgba(76,47,191,.09);
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+  body{font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+  h1,h2,h3,h4,.brand b,.kpi .num,.num,.match-badge b,.ring .hole b,.dp{font-family:'Sora','Inter',sans-serif;letter-spacing:-.015em}
   button{font-family:inherit}
   .hidden{display:none!important}
 
@@ -31,8 +36,8 @@
 
   /* ---------- LANDING ---------- */
   .lp{min-height:100vh;background:
-      radial-gradient(1200px 500px at 80% -10%,#eaf0fe 0,transparent 60%),
-      radial-gradient(900px 500px at 0% 110%,#fff2df 0,transparent 55%),#fff;}
+      radial-gradient(1200px 500px at 80% -10%,#EDE7FF 0,transparent 60%),
+      radial-gradient(900px 500px at 0% 110%,#F0EAFF 0,transparent 55%),#fff;}
   .lp-nav{display:flex;align-items:center;justify-content:space-between;padding:20px 6vw;max-width:1300px;margin:0 auto}
   .lp-nav .brand b{font-size:20px}
   .lp-actions{display:flex;align-items:center;gap:12px}
@@ -52,7 +57,7 @@
   .auth{min-height:100vh;display:grid;grid-template-columns:1.05fr 1fr}
   .auth-art{background:
      radial-gradient(700px 400px at 30% 20%,#2a4bd0 0,transparent 60%),
-     linear-gradient(160deg,#0c1738,#16265f 60%,#1e40af);color:#fff;padding:56px 5vw;display:flex;flex-direction:column;justify-content:center}
+     linear-gradient(160deg,#140b29,#241452 60%,#4C2FBF);color:#fff;padding:56px 5vw;display:flex;flex-direction:column;justify-content:center}
   .auth-art .brand b{color:#fff}
   .auth-art h2{font-size:34px;letter-spacing:-.5px;margin:28px 0 14px;line-height:1.15}
   .auth-art p{color:#b9c5ee;font-size:15px;line-height:1.6;max-width:420px}
@@ -82,7 +87,7 @@
   .app{display:flex;min-height:100vh}
   .side{width:236px;background:var(--navy);color:#c7d0ea;display:flex;flex-direction:column;padding:20px 14px;position:sticky;top:0;height:100vh;flex-shrink:0}
   .brand{display:flex;align-items:center;gap:10px}
-  .brand .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--blue-3),var(--blue));display:grid;place-items:center;color:#fff;font-weight:800;font-size:19px;cursor:pointer}
+  .brand .logo{width:36px;height:36px;border-radius:11px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240'%3E%3Cpath d='M48 52 L120 168' stroke='%234C2FBF' stroke-width='34' stroke-linecap='round'/%3E%3Cpath d='M192 52 L120 168' stroke='%239D7BFF' stroke-width='34' stroke-linecap='round'/%3E%3Ccircle cx='120' cy='166' r='22' fill='%23ffffff'/%3E%3Ccircle cx='120' cy='166' r='13' fill='%235B3DEF'/%3E%3C/svg%3E") center/24px no-repeat;box-shadow:0 2px 8px rgba(76,47,191,.18);color:transparent;font-size:0;cursor:pointer}
   .brand b{color:var(--ink);font-size:18px;letter-spacing:.5px}
   .side .brand b{color:#fff}
   .side .brand small{display:block;color:#7f8dbf;font-size:8px;letter-spacing:2px;margin-top:2px}
@@ -163,7 +168,7 @@
   .whylink{color:var(--blue-2);font-size:12px;font-weight:600;cursor:pointer;background:none;border:0;padding:0;margin-top:10px}
   .unlock{display:flex;gap:8px;margin-top:12px}
 
-  .ach{display:flex;gap:11px;align-items:center;padding:12px;border-radius:12px;background:linear-gradient(135deg,var(--navy),#182a63);color:#fff;margin-bottom:9px}
+  .ach{display:flex;gap:11px;align-items:center;padding:12px;border-radius:12px;background:linear-gradient(135deg,var(--navy),#2a1a63);color:#fff;margin-bottom:9px}
   .ach .em{width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.12);display:grid;place-items:center;font-size:17px}
   .ach b{font-size:13px} .ach small{display:block;color:#aeb9e0;font-size:11px;margin-top:1px}
   .step{display:flex;gap:11px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
@@ -298,10 +303,12 @@
       <div class="row-between"><span></span><button class="link" onclick="alertMsg('Fluxo “Esqueci minha senha” — protótipo')">Esqueci minha senha</button></div>
       <button class="btn primary block lg" onclick="doLogin()">Entrar</button>
       <div id="adminNote" class="note hidden" style="margin-top:14px">🔒 Painel administrativo — em desenvolvimento (Fase 3).</div>
-      <div class="divider">ou continue com</div>
-      <div class="oauth">
-        <button onclick="alertMsg('OAuth Google — protótipo')"><span style="color:#ea4335;font-weight:800">G</span> Google</button>
-        <button onclick="alertMsg('OAuth LinkedIn — protótipo')"><span style="color:#0a66c2;font-weight:800">in</span> LinkedIn</button>
+      <div id="loginSocial">
+        <div class="divider">ou continue com</div>
+        <div class="oauth">
+          <button class="oauth-google" onclick="oauthStart('google')"><span style="color:#ea4335;font-weight:800">G</span> Google</button>
+          <button class="oauth-linkedin" onclick="oauthStart('linkedin')"><span style="color:#0a66c2;font-weight:800">in</span> LinkedIn</button>
+        </div>
       </div>
       <div class="auth-foot">Não tem conta? <button class="link" onclick="go('signup')">Criar conta grátis</button></div>
     </div>
@@ -328,6 +335,13 @@
       <label style="display:flex;gap:8px;font-size:12px;color:var(--muted);margin:4px 0 16px;align-items:flex-start">
         <input type="checkbox" checked style="margin-top:2px"> Aceito os Termos de Uso e a Política de Privacidade.</label>
       <button class="btn primary block lg" onclick="doSignup()">Criar Conta Grátis</button>
+      <div id="signupSocial">
+        <div class="divider">ou cadastre-se com</div>
+        <div class="oauth">
+          <button class="oauth-google" onclick="oauthStart('google')"><span style="color:#ea4335;font-weight:800">G</span> Google</button>
+          <button class="oauth-linkedin" onclick="oauthStart('linkedin')"><span style="color:#0a66c2;font-weight:800">in</span> LinkedIn</button>
+        </div>
+      </div>
       <div class="auth-foot">Já tem conta? <button class="link" onclick="go('login')">Fazer login</button></div>
     </div>
   </div>
@@ -342,6 +356,7 @@
   </aside>
   <div class="backdrop" id="backdrop" onclick="toggleSide(false)"></div>
   <div class="modal-back" id="modalBack" onclick="closeModal(event)"><div class="modal" id="modalBody"></div></div>
+  <input type="file" id="avatarInput" accept="image/png,image/jpeg,image/webp" style="display:none" onchange="onAvatarPicked(event)">
   <div class="main">
     <div class="top">
       <button class="menu-toggle" onclick="toggleSide()" aria-label="Menu">☰</button>
@@ -389,6 +404,52 @@ function api(path,opts){opts=opts||{};
 }
 function roleToCode(r){return r==='empresa'?'E':'C';}
 function val(id){var el=document.getElementById(id);return el?el.value:'';}
+
+/* ---- Avatar / foto ---- */
+function avatarInner(url,initial){ return url ? '<img src="'+url+'" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" alt="">' : initial; }
+function applyAvatars(){ var u=VZ.user||{}, ini=((''+(u.nome||'V')).trim()[0]||'V').toUpperCase();
+  var at=document.getElementById('avatarTop'); if(at) at.innerHTML=avatarInner(u.avatar,ini);
+  var ap=document.getElementById('avatarProfile'); if(ap) ap.innerHTML=avatarInner(u.avatar,ini);
+}
+function pickAvatar(){ var i=document.getElementById('avatarInput'); if(i) i.click(); }
+function onAvatarPicked(e){
+  var f=e.target.files&&e.target.files[0]; if(!f) return;
+  if(f.size>2*1024*1024){ alertMsg('Imagem muito grande (máx 2MB).'); e.target.value=''; return; }
+  var rd=new FileReader();
+  rd.onload=function(){ alertMsg('Enviando foto…');
+    api('/me/avatar',{method:'POST',body:{image:rd.result}}).then(function(d){ var u=VZ.user||{}; u.avatar=d.url; VZ.user=u; applyAvatars(); alertMsg('Foto atualizada! ✓'); }).catch(function(err){ alertMsg(err.message); });
+  };
+  rd.readAsDataURL(f); e.target.value='';
+}
+
+/* ---- OAuth (Google / LinkedIn) ---- */
+var vzOAuth={google:true,linkedin:true};
+function oauthStart(provider){
+  var role=(state.screen==='signup')?(state.signupRole==='E'?'empresa':'candidato'):(state.loginRole==='E'?'empresa':'candidato');
+  api('/oauth/'+provider+'/start?role='+role,{auth:false}).then(function(d){
+    localStorage.setItem('vz_oauth', JSON.stringify({provider:provider,state:d.state,role:role}));
+    window.location.href=d.url;
+  }).catch(function(e){ alertMsg(e.message||'Login social indisponível.'); });
+}
+function applyOAuthVisibility(){
+  ['google','linkedin'].forEach(function(p){ var els=document.querySelectorAll('.oauth-'+p); for(var i=0;i<els.length;i++){ els[i].style.display=vzOAuth[p]?'':'none'; } });
+  var any=vzOAuth.google||vzOAuth.linkedin;
+  ['loginSocial','signupSocial'].forEach(function(id){ var el=document.getElementById(id); if(el) el.style.display=any?'':'none'; });
+}
+function handleOAuthCallback(){
+  var qs=(window.location&&window.location.search)||'';
+  if(qs.indexOf('code=')===-1) return false;
+  var params=new URLSearchParams(qs), code=params.get('code'), st=params.get('state');
+  var saved=null; try{ saved=JSON.parse(localStorage.getItem('vz_oauth')||'null'); }catch(e){}
+  localStorage.removeItem('vz_oauth');
+  try{ history.replaceState({},'',(window.location.pathname||'/')); }catch(e){}
+  if(!code||!saved||saved.state!==st){ go('login'); alertMsg('Não foi possível concluir o login social.'); return true; }
+  go('login'); alertMsg('Concluindo login…');
+  api('/oauth/'+saved.provider+'/finish',{method:'POST',auth:false,body:{code:code,role:saved.role}})
+    .then(function(d){ VZ.token=d.token; VZ.user=d.user; enterApp(roleToCode(d.user.role)); })
+    .catch(function(e){ go('login'); alertMsg(e.message); });
+  return true;
+}
 
 /* ---- login ---- */
 function pickLogin(r){ state.loginRole=r;
@@ -444,7 +505,7 @@ function enterApp(role){
   document.getElementById('vezusPill').classList.toggle('hidden', role!=='E');
   var u=VZ.user||{}, nome=u.nome||(role==='E'?'Empresa':'Candidato');
   var av=document.getElementById('avatarTop');
-  av.textContent=((nome.trim()[0])||'V').toUpperCase();
+  av.innerHTML=avatarInner(u.avatar, ((nome.trim()[0])||'V').toUpperCase());
   av.style.borderRadius = role==='E'?'11px':'50%';
   document.getElementById('whoName').textContent = nome;
   document.getElementById('whoRole').textContent = role==='E'?'Empresa':'Candidato';
@@ -454,6 +515,8 @@ function enterApp(role){
 function logout(){ VZ.token=null; VZ.user=null; go('landing'); }
 function vzBoot(){
   renderSignupFields();
+  api('/oauth/status',{auth:false}).then(function(s){ vzOAuth=s; applyOAuthVisibility(); }).catch(function(){ vzOAuth={google:false,linkedin:false}; applyOAuthVisibility(); });
+  if(handleOAuthCallback()) return;
   if(VZ.token && VZ.user){
     api('/auth/me').then(function(me){ VZ.user=me; enterApp(roleToCode(me.role)); })
       .catch(function(){ VZ.token=null; VZ.user=null; go('landing'); });
@@ -505,6 +568,9 @@ function vzHydrate(){
       if(state.page==='perfil') return hydrateCompanyProfile();
       if(state.page==='vagas') return hydrateCompanyVagas();
       if(state.page==='buscar') return hydrateBuscar();
+      if(state.page==='match') return hydrateMatch();
+      if(state.page==='favoritos') return hydrateFavoritos();
+      if(state.page==='banco') return hydrateBanco();
       if(state.page==='financeiro') return hydrateFinanceiro();
       if(state.page==='mensagens') return hydrateMensagens();
       if(state.page==='config') return hydrateConfig();
@@ -703,7 +769,14 @@ function renderTalent(t){
   } else {
     action='<div class="unlock"><button class="btn dark" style="flex:1" onclick="desbloquear('+t.id+',this)">🔓 Desbloquear Perfil · 1 Vezu</button></div>'+(t.completude>=50?'':'<p class="muted" style="margin-top:8px">Perfil ainda incompleto para desbloqueio.</p>');
   }
-  return '<div class="match-card">'+head+'<div class="tags">'+tags+'</div>'+action+'</div>';
+  var fav='<button class="btn ghost" style="margin-top:8px;width:100%" onclick="toggleFav('+t.id+',this)">'+(t.favorito?'★ Favoritado':'☆ Favoritar')+'</button>';
+  return '<div class="match-card">'+head+'<div class="tags">'+tags+'</div>'+action+fav+'</div>';
+}
+function toggleFav(id,btn){
+  api('/company/favorito/'+id,{method:'POST'}).then(function(d){
+    if(btn) btn.innerHTML=d.favorito?'★ Favoritado':'☆ Favoritar';
+    if(state.page==='favoritos') hydrateFavoritos();
+  }).catch(function(e){ alertMsg(e.message); });
 }
 function desbloquear(id,btn){ if(btn){btn.disabled=true;btn.textContent='Desbloqueando…';}
   api('/company/unlock/'+id,{method:'POST'}).then(function(d){
@@ -729,6 +802,7 @@ function openTalento(id){
       : '<div class="unlock"><button class="btn dark" style="flex:1" onclick="desbloquearModal('+t.id+',this)">🔓 Desbloquear Perfil · 1 Vezu</button></div>'+(t.completude>=50?'':'<p class="muted" style="margin-top:8px">Perfil ainda incompleto para desbloqueio.</p>');
     openModal('<div class="pad">'
       +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><div style="display:flex;gap:14px;align-items:center"><div class="avatar'+(t.unlocked?'':' blur')+'" style="width:52px;height:52px;font-size:16px">'+esc((t.nome||'?').substring(0,2))+'</div><div><h2 style="font-size:20px">'+esc(t.nome)+'</h2><div class="muted">'+esc(t.cargo||'—')+(t.cidade?' · '+esc(t.cidade):'')+' · '+(t.completude||0)+'% perfil</div></div></div><button class="icobtn" onclick="closeModal()">✕</button></div>'
+      +'<div style="margin-top:10px"><button class="btn ghost" onclick="toggleFav('+t.id+',this)">'+(t.favorito?'★ Favoritado':'☆ Favoritar')+'</button></div>'
       +(t.resumo?'<p style="margin:14px 0;font-size:13.5px;color:#42506e;line-height:1.6">'+esc(t.resumo)+'</p>':'')
       +'<div style="margin:14px 0">'+cta+'</div>'
       +'<h3 style="margin:18px 0 8px;font-size:14px">Hard Skills</h3>'+hard
@@ -744,7 +818,38 @@ function desbloquearModal(id,btn){ if(btn){btn.disabled=true;btn.textContent='De
     alertMsg('Perfil desbloqueado! Saldo: '+d.saldo+' Vezus');
     openTalento(id);
     if(state.page==='buscar') buscarTalentos();
+    if(state.page==='banco') hydrateBanco();
   }).catch(function(e){ if(btn){btn.disabled=false;btn.textContent='🔓 Desbloquear Perfil · 1 Vezu';} alertMsg(e.message); });
+}
+
+/* ---- Match Inteligente / Favoritos / Banco (empresa) ---- */
+function hydrateMatch(){ gerarRanking(); }
+function gerarRanking(){
+  var q=val('matchQ')||'', box=document.getElementById('matchList'); if(box) box.innerHTML='<p class="muted">Gerando ranking…</p>';
+  api('/company/talentos'+(q?('?q='+encodeURIComponent(q)):'')).then(function(list){ if(!box) return;
+    if(!list||!list.length){ box.innerHTML='<p class="muted">Nenhum candidato encontrado. Ajuste os termos.</p>'; return; }
+    box.innerHTML=list.map(renderTalent).join('');
+  }).catch(function(e){ if(box) box.innerHTML='<p class="muted">'+esc(e.message)+'</p>'; });
+}
+function hydrateFavoritos(){
+  var box=document.getElementById('favBox'); if(!box) return;
+  api('/company/favoritos').then(function(list){
+    if(!list||!list.length){ box.innerHTML='<p class="muted">Nenhum candidato favoritado ainda. Use o botão ☆ Favoritar em Buscar Talentos.</p>'; return; }
+    box.innerHTML=list.map(function(c){
+      var av=esc((c.nome||'C').substring(0,2)).toUpperCase();
+      return '<div class="listcard"><div class="li'+(c.unlocked?'':'" style="filter:blur(2px)')+'">'+av+'</div><div><h4>'+esc(c.nome)+'</h4><div class="meta">'+[c.cargo,c.cidade].filter(Boolean).map(esc).join(' · ')+' · '+(c.completude||0)+'% perfil</div></div><div class="actions"><button class="btn dark" onclick="openTalento('+c.id+')">Ver perfil</button><button class="btn ghost" onclick="toggleFav('+c.id+',this)">★ Remover</button></div></div>';
+    }).join('');
+  }).catch(function(){});
+}
+function hydrateBanco(){
+  var box=document.getElementById('bancoBox'); if(!box) return;
+  api('/company/banco').then(function(list){
+    if(!list||!list.length){ box.innerHTML='<p class="muted">Nenhum currículo desbloqueado ainda. Desbloqueie perfis em Buscar Talentos.</p>'; return; }
+    box.innerHTML=list.map(function(c){
+      var av=esc((c.nome||'C').substring(0,2)).toUpperCase();
+      return '<div class="listcard"><div class="li">'+av+'</div><div><h4>'+esc(c.nome)+'</h4><div class="meta">'+[c.cargo,c.cidade].filter(Boolean).map(esc).join(' · ')+'</div></div><div class="actions"><button class="btn ghost" onclick="openTalento('+c.id+')">◉ Ver perfil</button><button class="btn dark" onclick="msgUser('+c.id+')">✉ Mensagem</button></div></div>';
+    }).join('');
+  }).catch(function(){});
 }
 
 /* ---- Mensagens ---- */
@@ -896,7 +1001,7 @@ var PAGES_C={
 
  perfil:function(){return page('Meu Perfil','Gerencie suas informações pessoais e profissionais.','<button class="btn primary" id="btnSaveProfile">Salvar Alterações</button>',
   '<div class="card"><div class="pad">'
-  +'<div style="display:flex;gap:16px;align-items:center;margin-bottom:22px"><div class="avatar" style="width:64px;height:64px;font-size:20px" id="avatarProfile">'+(((VZ.user&&VZ.user.nome)||'V').trim()[0]||'V').toUpperCase()+'</div><button class="btn ghost">Alterar Foto</button></div>'
+  +'<div style="display:flex;gap:16px;align-items:center;margin-bottom:22px"><div class="avatar" style="width:64px;height:64px;font-size:20px" id="avatarProfile">'+avatarInner((VZ.user&&VZ.user.avatar),(((VZ.user&&VZ.user.nome)||'V').trim()[0]||'V').toUpperCase())+'</div><button class="btn ghost" onclick="pickAvatar()">Alterar Foto</button></div>'
   +'<div class="formgrid">'
    +fldI('pNome','Nome Completo')+fldI('pCargo','Cargo Desejado')
    +fldIRO('pEmail','Email')+fldI('pTel','Telefone')
@@ -954,7 +1059,7 @@ var PAGES_E={
   +'<div class="cols" style="margin-top:16px"><div class="stack">'
    +'<div class="card"><div class="pad"><div class="sec-h"><h3>Contratações por Mês</h3><span class="muted">Ritmo de crescimento do time</span></div><div id="barChart"></div></div></div>'
    +'<div class="card"><div class="pad"><div class="sec-h"><h3>Funil da vaga · Desenvolvedor Frontend Sênior</h3><span class="statuspill st-ativa">Ativa</span></div>'
-     +'<div class="funnel"><div class="fstep" style="background:#3b82f6"><b>342</b><span>Views</span></div><div class="fstep" style="background:#2563eb"><b>45</b><span>Interessados</span></div><div class="fstep" style="background:#1e40af"><b>28</b><span>Candidaturas</span></div><div class="fstep" style="background:#16a34a"><b>12</b><span>Matches</span><small>≥ 80%</small></div><div class="fstep" style="background:#0f7a37"><b>2</b><span>Contratações</span></div></div>'
+     +'<div class="funnel"><div class="fstep" style="background:#9D7BFF"><b>342</b><span>Views</span></div><div class="fstep" style="background:#5B3DEF"><b>45</b><span>Interessados</span></div><div class="fstep" style="background:#4C2FBF"><b>28</b><span>Candidaturas</span></div><div class="fstep" style="background:#22C58B"><b>12</b><span>Matches</span><small>≥ 80%</small></div><div class="fstep" style="background:#178a5f"><b>2</b><span>Contratações</span></div></div>'
      +'<p class="muted" style="margin-top:12px">Conversão view→candidatura <b style="color:var(--ink)">8,2%</b> · candidatura→contratação <b style="color:var(--ink)">7,1%</b></p></div></div>'
    +'<div class="card"><div class="pad"><div class="sec-h"><h3>Buscar Talentos — Match Inteligente</h3><span class="muted">Ordenado por compatibilidade</span></div>'
      +talentCard('CS','Carlos Santos','Farmacêutico · Curitiba, PR · 5 anos','97',['Manipulação','Atendimento','CRF Ativo','✓ Verificado','🟢 Disponível'],[['Hard skills',98],['Senioridade',95],['Localização',100],['Formação',100]],true)
@@ -967,29 +1072,21 @@ var PAGES_E={
   +'</div></div></div>';},
 
  buscar:function(){return page('Buscar Talentos','Encontre os melhores profissionais para sua empresa.','',
-  '<div class="card" style="background:linear-gradient(135deg,#1e40af,#2563eb);color:#fff;margin-bottom:16px"><div class="pad"><h3 style="color:#fff">✦ Match Inteligente com IA</h3><p style="color:#cdd7f5;font-size:13px;margin:6px 0 12px">Descreva o profissional ideal (cargo, cidade, skills) e busque no banco de talentos.</p><div style="display:flex;gap:10px"><input class="inp2" id="talentQ" style="flex:1" placeholder="Ex: farmacêutico Curitiba manipulação" onkeydown="if(event.key===\'Enter\')buscarTalentos()"><button class="btn orange" onclick="buscarTalentos()">Buscar</button></div></div></div>'
+  '<div class="card" style="background:linear-gradient(135deg,#4C2FBF,#5B3DEF);color:#fff;margin-bottom:16px"><div class="pad"><h3 style="color:#fff">✦ Match Inteligente com IA</h3><p style="color:#cdd7f5;font-size:13px;margin:6px 0 12px">Descreva o profissional ideal (cargo, cidade, skills) e busque no banco de talentos.</p><div style="display:flex;gap:10px"><input class="inp2" id="talentQ" style="flex:1" placeholder="Ex: farmacêutico Curitiba manipulação" onkeydown="if(event.key===\'Enter\')buscarTalentos()"><button class="btn orange" onclick="buscarTalentos()">Buscar</button></div></div></div>'
   +'<div id="talentList"><p class="muted">Carregando…</p></div>');},
 
  vagas:function(){return page('Gestão de Vagas','Gerencie suas vagas abertas e acompanhe os candidatos.','<button class="btn dark" id="vagaAddBtn">+ Publicar Vaga</button>',
   '<div id="vagaForm" class="card" style="margin-bottom:16px;display:none"><div class="pad" id="vagaFormBody"></div></div><div id="myVagas"><p class="muted">Carregando…</p></div>');},
 
- match:function(){return page('Match Inteligente','Utilize nossa IA para encontrar o perfil ideal instantaneamente.','',
-  '<div class="card" style="background:linear-gradient(135deg,#1e40af,#2563eb);color:#fff;margin-bottom:16px"><div class="pad" style="text-align:center;padding:34px"><div style="font-size:34px">◈</div><h3 style="color:#fff;margin:10px 0">Descreva o profissional ideal</h3><p style="color:#cdd7f5;font-size:13px;max-width:520px;margin:0 auto 16px">Nossa IA analisa milhares de currículos em segundos para entregar os perfis com maior compatibilidade — e mostra o porquê de cada match.</p><div style="display:flex;gap:10px;max-width:620px;margin:0 auto"><input class="inp2" style="flex:1" placeholder="Ex: Procuro um farmacêutico em Curitiba com experiência em manipulação"><button class="btn orange">Gerar Ranking</button></div></div></div>'
-  +'<h3 class="sec-h" style="margin-bottom:10px">⭐ Últimos Rankings Gerados</h3>'
-  +'<div class="listcard"><div class="li">◈</div><div><h4>"Desenvolvedor React Pleno/Sênior em SP"</h4><div class="meta">Gerado há 2 dias · 12 matches encontrados com mais de 90%</div></div><div class="actions"><button class="btn ghost">Ver Resultados</button></div></div>'
-  +'<div class="listcard"><div class="li">◈</div><div><h4>"Farmacêutico RT — Curitiba"</h4><div class="meta">Gerado há 5 dias · 8 matches encontrados</div></div><div class="actions"><button class="btn ghost">Ver Resultados</button></div></div>');},
+ match:function(){return page('Match Inteligente','Descreva o perfil ideal e a IA rankeia os candidatos.','',
+  '<div class="card" style="background:linear-gradient(135deg,#4C2FBF,#5B3DEF);color:#fff;margin-bottom:16px"><div class="pad" style="text-align:center;padding:28px"><div style="font-size:30px">◈</div><h3 style="color:#fff;margin:8px 0">Descreva o profissional ideal</h3><div style="display:flex;gap:10px;max-width:640px;margin:12px auto 0"><input class="inp2" id="matchQ" style="flex:1" placeholder="Ex: desenvolvedor React sênior em São Paulo" onkeydown="if(event.key===\'Enter\')gerarRanking()"><button class="btn orange" onclick="gerarRanking()">Gerar Ranking</button></div></div></div>'
+  +'<div id="matchList"><p class="muted">Carregando…</p></div>');},
 
- favoritos:function(){return page('Candidatos Favoritos','Gerencie seus profissionais salvos, organizados por coleções.','<button class="btn ghost">+ Nova Coleção</button>',
-  '<div class="chips"><span class="chip on">Todos (3)</span><span class="chip">Farmacêuticos (1)</span><span class="chip">TI (1)</span><span class="chip">Marketing (1)</span></div>'
-  +'<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr))">'
-   +favCard('Ana Costa','Farmacêutica · Curitiba, PR','97',true)
-   +favCard('Gabriel Santos','Desenvolvedor React · São Paulo, SP','92',true)
-   +favCard('Mariana Lima','Analista de Marketing · Rio de Janeiro, RJ','88',true)+'</div>');},
+ favoritos:function(){return page('Candidatos Favoritos','Profissionais que você salvou.','',
+  '<div id="favBox"><p class="muted">Carregando…</p></div>');},
 
- banco:function(){return page('Banco de Currículos','Acesse os currículos desbloqueados e históricos.','',
-   bancoCard('João Pereira','Dev Fullstack','Hoje, 10:30')
-  +bancoCard('Fernanda Souza','Designer UX','Ontem, 15:45')
-  +bancoCard('Lucas Martins','Gerente de Projetos','12/05/2026'));},
+ banco:function(){return page('Banco de Currículos','Acesse os currículos desbloqueados.','',
+  '<div id="bancoBox"><p class="muted">Carregando…</p></div>');},
 
  mensagens:function(){return page('Mensagens','Converse com os candidatos.','', '<div id="msgWrap"><p class="muted">Carregando…</p></div>');},
 
@@ -1003,7 +1100,7 @@ var PAGES_E={
 
  perfil:function(){return page('Meu Perfil da Empresa','Gerencie as informações da sua empresa visíveis para os candidatos.','<button class="btn primary" id="btnSaveProfile">Salvar Alterações</button>',
   '<div class="card"><div class="pad">'
-  +'<div style="display:flex;gap:16px;align-items:center;margin-bottom:8px"><div class="avatar" style="width:64px;height:64px;font-size:20px;border-radius:14px">'+(((VZ.user&&VZ.user.nome)||'V').trim()[0]||'V').toUpperCase()+'</div><div><h2 style="font-size:20px">'+((VZ.user&&VZ.user.nome)||'Sua empresa')+'</h2><div class="muted">Complete o perfil para os candidatos te encontrarem.</div></div></div>'
+  +'<div style="display:flex;gap:16px;align-items:center;margin-bottom:8px"><div class="avatar" style="width:64px;height:64px;font-size:20px;border-radius:14px" id="avatarProfile">'+avatarInner((VZ.user&&VZ.user.avatar),(((VZ.user&&VZ.user.nome)||'V').trim()[0]||'V').toUpperCase())+'</div><div><h2 style="font-size:20px">'+esc((VZ.user&&VZ.user.nome)||'Sua empresa')+'</h2><div class="muted">Complete o perfil para os candidatos te encontrarem.</div></div><button class="btn ghost" style="margin-left:auto" onclick="pickAvatar()">Alterar Logo</button></div>'
   +'<div class="formgrid" style="margin-top:18px">'
    +fldI('cRazao','Razão Social')+fldIRO('cCnpj','CNPJ')
    +fldI('cSegmento','Segmento')+fldI('cTamanho','Tamanho da Empresa')
@@ -1064,8 +1161,8 @@ function drawLine(data,labels){
   data.forEach(function(v,i){d+=(i?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1)+' ';});
   var area='M'+x(0)+' '+(h-pad)+' '+data.map(function(v,i){return 'L'+x(i).toFixed(1)+' '+y(v).toFixed(1);}).join(' ')+' L'+x(n-1)+' '+(h-pad)+' Z';
   [0,.25,.5,.75,1].forEach(function(f){var gv=Math.round(max*f),gy=y(gv);grid+='<line x1="'+pad+'" y1="'+gy+'" x2="'+(w-pad)+'" y2="'+gy+'" stroke="#eef1f7"/><text x="6" y="'+(gy+3)+'" font-size="9" fill="#9aa2b1">'+gv+'</text>';});
-  data.forEach(function(v,i){dots+='<circle cx="'+x(i)+'" cy="'+y(v)+'" r="4" fill="#fff" stroke="#2563eb" stroke-width="2"/>';labs+='<text x="'+x(i)+'" y="'+(h-8)+'" font-size="10" fill="#9aa2b1" text-anchor="middle">'+labels[i]+'</text>';});
-  lc.innerHTML='<svg viewBox="0 0 '+w+' '+h+'" width="100%" role="img" aria-label="Evolução do perfil"><defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b82f6" stop-opacity=".18"/><stop offset="1" stop-color="#3b82f6" stop-opacity="0"/></linearGradient></defs>'+grid+'<path d="'+area+'" fill="url(#g1)"/><path d="'+d+'" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linejoin="round"/>'+dots+labs+'</svg>';
+  data.forEach(function(v,i){dots+='<circle cx="'+x(i)+'" cy="'+y(v)+'" r="4" fill="#fff" stroke="#5B3DEF" stroke-width="2"/>';labs+='<text x="'+x(i)+'" y="'+(h-8)+'" font-size="10" fill="#9aa2b1" text-anchor="middle">'+labels[i]+'</text>';});
+  lc.innerHTML='<svg viewBox="0 0 '+w+' '+h+'" width="100%" role="img" aria-label="Evolução do perfil"><defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9D7BFF" stop-opacity=".18"/><stop offset="1" stop-color="#9D7BFF" stop-opacity="0"/></linearGradient></defs>'+grid+'<path d="'+area+'" fill="url(#g1)"/><path d="'+d+'" fill="none" stroke="#5B3DEF" stroke-width="2.5" stroke-linejoin="round"/>'+dots+labs+'</svg>';
 }
 function drawBar(data){
   var bc=document.getElementById('barChart'); if(!bc) return;
@@ -1075,7 +1172,7 @@ function drawBar(data){
   var x=function(i){return pad+i*((w-pad*2)/n)+((w-pad*2)/n-bw)/2;}, y=function(v){return h-pad-(v/max)*(h-pad*2);};
   var grid='',bars='';
   [0,.25,.5,.75,1].forEach(function(f){var gv=Math.round(max*f),gy=y(gv);grid+='<line x1="'+pad+'" y1="'+gy+'" x2="'+(w-pad)+'" y2="'+gy+'" stroke="#eef1f7"/><text x="8" y="'+(gy+3)+'" font-size="9" fill="#9aa2b1">'+gv+'</text>';});
-  data.forEach(function(dd,i){var bh=(dd[1]/max)*(h-pad*2);bars+='<rect x="'+x(i)+'" y="'+y(dd[1])+'" width="'+bw+'" height="'+bh+'" rx="6" fill="#1e40af"/><text x="'+(x(i)+bw/2)+'" y="'+(y(dd[1])-6)+'" font-size="11" font-weight="700" fill="#1e40af" text-anchor="middle">'+dd[1]+'</text><text x="'+(x(i)+bw/2)+'" y="'+(h-8)+'" font-size="10" fill="#9aa2b1" text-anchor="middle">'+dd[0]+'</text>';});
+  data.forEach(function(dd,i){var bh=(dd[1]/max)*(h-pad*2);bars+='<rect x="'+x(i)+'" y="'+y(dd[1])+'" width="'+bw+'" height="'+bh+'" rx="6" fill="#4C2FBF"/><text x="'+(x(i)+bw/2)+'" y="'+(y(dd[1])-6)+'" font-size="11" font-weight="700" fill="#4C2FBF" text-anchor="middle">'+dd[1]+'</text><text x="'+(x(i)+bw/2)+'" y="'+(h-8)+'" font-size="10" fill="#9aa2b1" text-anchor="middle">'+dd[0]+'</text>';});
   bc.innerHTML='<svg viewBox="0 0 '+w+' '+h+'" width="100%" role="img" aria-label="Contratações por mês">'+grid+bars+'</svg>';
 }
 function drawCharts(){ drawLine(); drawBar(); }
