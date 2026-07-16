@@ -347,6 +347,24 @@
   </div>
 </div>
 
+<!-- ================= ONBOARDING ================= -->
+<div id="scr-onboarding" class="hidden" style="min-height:100vh;background:var(--bg)">
+  <div style="max-width:780px;margin:0 auto;padding:34px 20px 90px">
+    <div class="brand" style="margin-bottom:14px"><div class="logo"></div><div><b style="font-size:20px">VEZULO</b></div></div>
+    <h1 style="font-size:26px;margin-bottom:4px">Vamos montar seu perfil</h1>
+    <p class="muted" style="margin-bottom:18px">Quanto mais completo, mais empresas te encontram. Você pode pular e completar depois.</p>
+    <div id="obSteps" style="display:flex;gap:6px;margin-bottom:20px"></div>
+    <div class="card"><div class="pad" id="obBody"></div></div>
+    <div style="display:flex;justify-content:space-between;margin-top:18px;gap:10px;flex-wrap:wrap">
+      <button class="btn ghost" onclick="obPrev()" id="obBack">← Voltar</button>
+      <div style="display:flex;gap:10px">
+        <button class="btn ghost" onclick="obFinish(true)">Pular por agora</button>
+        <button class="btn primary" onclick="obNext()" id="obNext">Próximo →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ================= APP ================= -->
 <div id="scr-app" class="app hidden">
   <aside class="side">
@@ -375,8 +393,8 @@ var state={screen:'landing', role:'C', page:'dashboard', loginRole:'C', signupRo
 
 function go(scr){
   state.screen=scr;
-  ['landing','login','signup','app'].forEach(function(s){
-    document.getElementById('scr-'+s).classList.toggle('hidden', s!==scr);
+  ['landing','login','signup','onboarding','app'].forEach(function(s){
+    var el=document.getElementById('scr-'+s); if(el) el.classList.toggle('hidden', s!==scr);
   });
   if(scr==='signup') renderSignupFields();
   window.scrollTo(0,0);
@@ -436,6 +454,140 @@ function applyOAuthVisibility(){
   var any=vzOAuth.google||vzOAuth.linkedin;
   ['loginSocial','signupSocial'].forEach(function(id){ var el=document.getElementById(id); if(el) el.style.display=any?'':'none'; });
 }
+/* ============ ONBOARDING DO CANDIDATO ============ */
+var UFS=['','AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
+var OB_TITLES=['Dados pessoais','Sobre você','Formação e experiência','Habilidades e idiomas','Objetivos profissionais','Diversidade'];
+var OB_SCALARS=['nome','cpf','nacionalidade','data_nascimento','telefone','cidade','estado','sexo','estado_civil','pcd','receber_mensagens',
+  'cargo_desejado','resumo','linkedin','portfolio','instagram','facebook','jornada','contrato','nivel_min','nivel_max','salario_min','salario_max',
+  'veiculo','disp_viajar','disp_mudar','identidade_genero','orientacao','cor_raca'];
+var CONHEC=['Banco de dados','Programação','Gráficos/Web','Aplicações de Escritório','Sistemas Operacionais','Outros programas'];
+var obState={step:0,data:{},formacao:[],experiencia:[],idiomas:[],hard:[],soft:[],conhecimentos:[],estados:[],cnh:[]};
+
+function obInit(){
+  obState={step:0,data:{},formacao:[],experiencia:[],idiomas:[{idioma:'Português',nivel:'Nativo'}],hard:[],soft:[],conhecimentos:[],estados:[],cnh:[]};
+  go('onboarding');
+  document.getElementById('obBody').innerHTML='<p class="muted">Carregando…</p>';
+  Promise.all([api('/candidate/profile').catch(function(){return{};}), api('/candidate/skills').catch(function(){return{hard:[],soft:[]};})]).then(function(r){
+    var p=r[0]||{}, sk=r[1]||{};
+    obState.data=p||{};
+    obState.hard=(sk&&sk.hard)||[]; obState.soft=(sk&&sk.soft)||[];
+    if(Array.isArray(p.idiomas)&&p.idiomas.length) obState.idiomas=p.idiomas;
+    if(Array.isArray(p.conhecimentos)) obState.conhecimentos=p.conhecimentos;
+    if(Array.isArray(p.estados)) obState.estados=p.estados;
+    if(p.cnh) obState.cnh=(''+p.cnh).split(',').map(function(s){return s.trim();}).filter(Boolean);
+    if(!obState.data.nome) obState.data.nome=(VZ.user&&VZ.user.nome)||'';
+    if(!obState.data.nacionalidade) obState.data.nacionalidade='Brasileira';
+    renderOnboarding();
+  });
+}
+function of(key,label,type){return '<div><label class="lbl">'+label+'</label><input class="inp2" id="ob_'+key+'" '+(type?'type="'+type+'"':'')+' value="'+esc(obState.data[key]||'')+'"></div>';}
+function oarea(key,label){return '<div class="full"><label class="lbl">'+label+'</label><textarea class="inp2" id="ob_'+key+'">'+esc(obState.data[key]||'')+'</textarea></div>';}
+function osel(key,label,opts){var v=obState.data[key]||'';
+  return '<div><label class="lbl">'+label+'</label><select class="inp2" id="ob_'+key+'">'+opts.map(function(o){var val=(typeof o==='object')?o[0]:o, lb=(typeof o==='object')?o[1]:(o||'Selecione');return '<option value="'+esc(val)+'"'+(String(v)===String(val)?' selected':'')+'>'+esc(lb)+'</option>';}).join('')+'</select></div>';}
+
+function renderOnboarding(){
+  var steps=OB_TITLES.map(function(t,i){return '<div style="flex:1;height:5px;border-radius:4px;background:'+(i<=obState.step?'var(--blue-2)':'var(--line)')+'"></div>';}).join('');
+  document.getElementById('obSteps').innerHTML=steps;
+  document.getElementById('obBody').innerHTML=obStepHTML(obState.step);
+  document.getElementById('obBack').style.visibility=obState.step===0?'hidden':'visible';
+  document.getElementById('obNext').textContent=(obState.step===OB_TITLES.length-1)?'Concluir ✓':'Próximo →';
+}
+function obStepHTML(i){
+  if(i===0){ return '<h3 style="margin-bottom:4px">1. Dados pessoais</h3><p class="muted" style="margin-bottom:14px">Garantimos a segurança e a confidencialidade dos seus dados.</p><div class="formgrid">'
+    +of('nome','Nome completo')+of('cpf','CPF')
+    +of('nacionalidade','Nacionalidade')+of('data_nascimento','Data de nascimento','date')
+    +of('telefone','Telefone')+of('cidade','Cidade')
+    +osel('estado','Estado (UF)',UFS)
+    +osel('sexo','Sexo',['','Feminino','Masculino','Não especificado'])
+    +osel('estado_civil','Estado civil',['','Solteiro(a)','Casado(a)','Viúvo(a)','Separado(a)','Divorciado(a)','Não especificado'])
+    +osel('pcd','Pessoa com deficiência?',['','Não','Sim'])
+    +osel('receber_mensagens','Deseja receber mensagens?',['','Sim','Não'])
+    +'</div>'; }
+  if(i===1){ return '<h3 style="margin-bottom:14px">2. Sobre você</h3><div class="formgrid">'
+    +of('cargo_desejado','Cargo desejado')+of('linkedin','LinkedIn')
+    +oarea('resumo','Resumo profissional')
+    +of('portfolio','Portfólio / site')+of('instagram','Instagram')
+    +of('facebook','Facebook')
+    +'</div>'; }
+  if(i===2){ return '<h3 style="margin-bottom:10px">3. Formação acadêmica</h3>'
+    +'<div id="obFormList">'+obRepList('formacao')+'</div>'
+    +'<div class="formgrid" style="margin-top:10px">'
+      +'<div><label class="lbl">Curso</label><input class="inp2" id="obf_curso"></div>'
+      +'<div><label class="lbl">Instituição</label><input class="inp2" id="obf_inst"></div>'
+      +'<div><label class="lbl">Nível</label><input class="inp2" id="obf_nivel" placeholder="Ex: Graduação"></div>'
+      +'<div><label class="lbl">Ano de conclusão</label><input class="inp2" id="obf_ano"></div>'
+    +'</div><button class="btn ghost" style="margin-top:10px" onclick="obAddForm()">+ Incluir formação</button>'
+    +'<h3 style="margin:22px 0 10px">Experiências profissionais</h3>'
+    +'<div id="obExpList">'+obRepList('experiencia')+'</div>'
+    +'<div class="formgrid" style="margin-top:10px">'
+      +'<div><label class="lbl">Cargo</label><input class="inp2" id="obe_cargo"></div>'
+      +'<div><label class="lbl">Empresa</label><input class="inp2" id="obe_empresa"></div>'
+      +'<div><label class="lbl">Início</label><input class="inp2" id="obe_inicio" placeholder="Ex: Jan 2021"></div>'
+      +'<div><label class="lbl">Fim</label><input class="inp2" id="obe_fim" placeholder="Ex: Atual"></div>'
+      +'<div class="full"><label class="lbl">Descrição</label><textarea class="inp2" id="obe_desc"></textarea></div>'
+    +'</div><button class="btn ghost" style="margin-top:10px" onclick="obAddExp()">+ Incluir experiência</button>'; }
+  if(i===3){ return '<h3 style="margin-bottom:10px">4. Habilidades técnicas</h3>'
+    +'<div style="display:flex;gap:8px;margin-bottom:10px"><input class="inp2" id="obhs_nome" placeholder="Ex: React"><input class="inp2" id="obhs_nivel" type="number" min="0" max="100" placeholder="Nível %" style="max-width:110px"><button class="btn ghost" onclick="obAddHard()">+</button></div><div id="obHardList">'+obHardList()+'</div>'
+    +'<h3 style="margin:20px 0 10px">Habilidades comportamentais</h3><div style="display:flex;gap:8px;margin-bottom:10px"><input class="inp2" id="obss_nome" placeholder="Ex: Comunicação"><button class="btn ghost" onclick="obAddSoft()">+</button></div><div id="obSoftList" class="tags">'+obSoftList()+'</div>'
+    +'<h3 style="margin:20px 0 10px">Idiomas</h3><div id="obIdList">'+obIdList()+'</div>'
+    +'<div style="display:flex;gap:8px;margin-top:8px"><input class="inp2" id="obid_idioma" placeholder="Idioma"><select class="inp2" id="obid_nivel" style="max-width:170px"><option>Básico</option><option>Intermediário</option><option>Avançado</option><option>Fluente</option><option>Nativo</option></select><button class="btn ghost" onclick="obAddIdioma()">+</button></div>'
+    +'<h3 style="margin:20px 0 10px">Conhecimentos em tecnologia</h3><div class="tags">'+CONHEC.map(function(c){var on=obState.conhecimentos.indexOf(c)>-1;return '<label class="chip'+(on?' on':'')+'" style="cursor:pointer"><input type="checkbox" class="obconhec" value="'+esc(c)+'" '+(on?'checked':'')+' style="display:none" onchange="this.parentNode.classList.toggle(\'on\',this.checked)">'+esc(c)+'</label>';}).join('')+'</div>'; }
+  if(i===4){ return '<h3 style="margin-bottom:14px">5. Objetivos profissionais</h3><div class="formgrid">'
+    +osel('jornada','Tipo de jornada',['','Período Integral','Parcial manhãs','Parcial tardes','Parcial noites','Noturno'])
+    +osel('contrato','Tipo de contrato',['','Efetivo – CLT','Autônomo','Cooperado','Estágio','Jovem Aprendiz','Prestador de Serviços (PJ)','Temporário','Trainee','Outros'])
+    +osel('nivel_min','Nível hierárquico mínimo',['','Estagiário','Operacional','Auxiliar','Assistente','Trainee','Técnico','Analista','Encarregado','Supervisor','Consultor','Especialista','Coordenador','Gerente','Diretor'])
+    +osel('nivel_max','Nível hierárquico máximo',['','Estagiário','Operacional','Auxiliar','Assistente','Trainee','Técnico','Analista','Encarregado','Supervisor','Consultor','Especialista','Coordenador','Gerente','Diretor'])
+    +of('salario_min','Pretensão salarial — de (R$)')+of('salario_max','até (R$)')
+    +osel('veiculo','Possui veículo próprio?',['','Não','Carro particular','Moto','Caminhão','Outro'])
+    +osel('disp_viajar','Disponibilidade para viajar?',['','Sim','Não'])
+    +osel('disp_mudar','Disponibilidade para mudar de residência?',['','Sim','Não'])
+    +'<div class="full"><label class="lbl">Habilitação (CNH)</label><div class="tags">'+['A','B','C','D','E'].map(function(c){var on=obState.cnh.indexOf(c)>-1;return '<label class="chip'+(on?' on':'')+'" style="cursor:pointer"><input type="checkbox" class="obcnh" value="'+c+'" '+(on?'checked':'')+' style="display:none" onchange="this.parentNode.classList.toggle(\'on\',this.checked)">'+c+'</label>';}).join('')+'</div></div>'
+    +'<div class="full"><label class="lbl">Estados em que deseja trabalhar (siglas, separadas por vírgula)</label><input class="inp2" id="ob_estados_text" value="'+esc((obState.estados||[]).join(', '))+'" placeholder="Ex: SP, PR, RJ"></div>'
+    +'</div>'; }
+  return '<h3 style="margin-bottom:4px">6. Diversidade <span class="muted" style="font-weight:400;font-size:14px">(opcional)</span></h3><p class="muted" style="margin-bottom:14px">O preenchimento é opcional e não eliminatório — serve só como informação complementar.</p><div class="formgrid">'
+    +osel('identidade_genero','Identidade de gênero',['','Cisgênero','Transgênero','Prefiro não responder','Outro'])
+    +osel('orientacao','Orientação sexual',['','Assexual','Bissexual','Heterossexual','Homossexual','Pansexual','Prefiro não responder','Outra'])
+    +osel('cor_raca','Cor ou raça',['','Amarela','Branca','Indígena','Parda','Preta','Prefiro não responder'])
+    +'</div>';
+}
+function obRepList(kind){var arr=obState[kind]; if(!arr.length) return '<p class="muted">Nenhum registro ainda.</p>';
+  return arr.map(function(it,idx){var t=(kind==='formacao')?(it.curso||'—'):(it.cargo||'—');var m=(kind==='formacao')?[it.instituicao,it.nivel,it.ano_conclusao]:[it.empresa,it.inicio,it.fim];
+    return '<div class="listcard" style="margin-bottom:8px"><div class="li">'+(kind==='formacao'?'◑':'▤')+'</div><div><h4>'+esc(t)+'</h4><div class="meta">'+m.filter(Boolean).map(esc).join(' · ')+'</div></div><div class="actions"><button class="icobtn" onclick="obDel(\''+kind+'\','+idx+')">🗑</button></div></div>';}).join('');}
+function obHardList(){return obState.hard.length?obState.hard.map(function(h,i){return '<div class="skillbar"><span>'+esc(h.nome)+'</span><div class="bar"><i style="width:'+(h.nivel||0)+'%"></i></div><span style="display:flex;gap:6px;justify-content:flex-end;align-items:center"><b>'+(h.nivel||0)+'%</b><button class="icobtn" style="width:24px;height:24px" onclick="obDelSkill(\'hard\','+i+')">×</button></span></div>';}).join(''):'<p class="muted">Nenhuma ainda.</p>';}
+function obSoftList(){return obState.soft.length?obState.soft.map(function(s,i){return '<span class="tag">'+esc(s)+' <b style="cursor:pointer" onclick="obDelSkill(\'soft\','+i+')">×</b></span>';}).join(''):'<p class="muted">Nenhuma ainda.</p>';}
+function obIdList(){return obState.idiomas.length?obState.idiomas.map(function(x,i){return '<div class="listcard" style="margin-bottom:8px"><div class="li">🗣</div><div><h4>'+esc(x.idioma)+'</h4><div class="meta">'+esc(x.nivel||'')+'</div></div><div class="actions"><button class="icobtn" onclick="obDelIdioma('+i+')">🗑</button></div></div>';}).join(''):'<p class="muted">Nenhum idioma.</p>';}
+function obAddForm(){var c=(val('obf_curso')||'').trim(); if(!c){alertMsg('Informe o curso.');return;} obState.formacao.push({curso:c,instituicao:val('obf_inst'),nivel:val('obf_nivel'),ano_conclusao:val('obf_ano')}); renderOnboarding();}
+function obAddExp(){var c=(val('obe_cargo')||'').trim(); if(!c){alertMsg('Informe o cargo.');return;} obState.experiencia.push({cargo:c,empresa:val('obe_empresa'),inicio:val('obe_inicio'),fim:val('obe_fim'),descricao:val('obe_desc')}); renderOnboarding();}
+function obDel(kind,idx){obState[kind].splice(idx,1); renderOnboarding();}
+function obAddHard(){var n=(val('obhs_nome')||'').trim(); if(!n)return; var lv=parseInt(val('obhs_nivel'),10); obState.hard.push({nome:n,nivel:isNaN(lv)?70:Math.max(0,Math.min(100,lv))}); document.getElementById('obHardList').innerHTML=obHardList(); setVal('obhs_nome','');setVal('obhs_nivel','');}
+function obAddSoft(){var n=(val('obss_nome')||'').trim(); if(!n)return; obState.soft.push(n); document.getElementById('obSoftList').innerHTML=obSoftList(); setVal('obss_nome','');}
+function obDelSkill(t,i){obState[t].splice(i,1); document.getElementById(t==='hard'?'obHardList':'obSoftList').innerHTML=(t==='hard'?obHardList():obSoftList());}
+function obAddIdioma(){var n=(val('obid_idioma')||'').trim(); if(!n)return; obState.idiomas.push({idioma:n,nivel:val('obid_nivel')}); document.getElementById('obIdList').innerHTML=obIdList(); setVal('obid_idioma','');}
+function obDelIdioma(i){obState.idiomas.splice(i,1); document.getElementById('obIdList').innerHTML=obIdList();}
+function obCollect(){
+  OB_SCALARS.forEach(function(k){ var el=document.getElementById('ob_'+k); if(el) obState.data[k]=el.value; });
+  var et=document.getElementById('ob_estados_text'); if(et){ obState.estados=et.value.split(',').map(function(s){return s.trim().toUpperCase();}).filter(Boolean); }
+  var ck=document.querySelectorAll('.obconhec'); if(ck.length){ obState.conhecimentos=[]; for(var i=0;i<ck.length;i++){ if(ck[i].checked) obState.conhecimentos.push(ck[i].value); } }
+  var cn=document.querySelectorAll('.obcnh'); if(cn.length){ obState.cnh=[]; for(var j=0;j<cn.length;j++){ if(cn[j].checked) obState.cnh.push(cn[j].value); } }
+}
+function obNext(){ obCollect(); if(obState.step>=OB_TITLES.length-1){ obFinish(false); return; } obState.step++; renderOnboarding(); window.scrollTo(0,0); }
+function obPrev(){ obCollect(); if(obState.step>0){ obState.step--; renderOnboarding(); window.scrollTo(0,0); } }
+function obFinish(skip){
+  obCollect();
+  var body={}; Object.keys(obState.data).forEach(function(k){ body[k]=obState.data[k]; });
+  body.estados=obState.estados||[]; body.conhecimentos=obState.conhecimentos||[]; body.idiomas=obState.idiomas||[];
+  if(obState.cnh&&obState.cnh.length) body.cnh=obState.cnh.join(', ');
+  var btn=document.getElementById('obNext'); if(btn) btn.disabled=true;
+  api('/candidate/profile',{method:'PUT',body:body}).then(function(){
+    var ps=[];
+    if((obState.hard&&obState.hard.length)||(obState.soft&&obState.soft.length)) ps.push(api('/candidate/skills',{method:'PUT',body:{hard:obState.hard||[],soft:obState.soft||[]}}));
+    (obState.formacao||[]).forEach(function(f){ ps.push(api('/candidate/education',{method:'POST',body:f})); });
+    (obState.experiencia||[]).forEach(function(x){ ps.push(api('/candidate/experience',{method:'POST',body:x})); });
+    return Promise.all(ps);
+  }).then(function(){ alertMsg('Perfil salvo! 🎉'); enterApp('C'); })
+    .catch(function(e){ if(btn) btn.disabled=false; alertMsg(e.message); });
+}
+
 function handleOAuthCallback(){
   var qs=(window.location&&window.location.search)||'';
   if(qs.indexOf('code=')===-1) return false;
@@ -446,7 +598,7 @@ function handleOAuthCallback(){
   if(!code||!saved||saved.state!==st){ go('login'); alertMsg('Não foi possível concluir o login social.'); return true; }
   go('login'); alertMsg('Concluindo login…');
   api('/oauth/'+saved.provider+'/finish',{method:'POST',auth:false,body:{code:code,role:saved.role}})
-    .then(function(d){ VZ.token=d.token; VZ.user=d.user; enterApp(roleToCode(d.user.role)); })
+    .then(function(d){ VZ.token=d.token; VZ.user=d.user; if(d.novo && d.user.role==='candidato'){ obInit(); } else { enterApp(roleToCode(d.user.role)); } })
     .catch(function(e){ go('login'); alertMsg(e.message); });
   return true;
 }
@@ -495,7 +647,7 @@ function doSignup(){
   if(r==='C'){ body.telefone=val('suTel')||''; } else { body.cnpj=val('suCnpj')||''; }
   alertMsg('Criando sua conta…');
   api('/auth/register',{method:'POST',auth:false,body:body})
-    .then(function(d){ VZ.token=d.token; VZ.user=d.user; enterApp(roleToCode(d.user.role)); })
+    .then(function(d){ VZ.token=d.token; VZ.user=d.user; if(d.user.role==='candidato'){ obInit(); } else { enterApp('E'); } })
     .catch(function(e){ alertMsg(e.message); });
 }
 
@@ -983,7 +1135,7 @@ function whyBlock(dims){var h='<button class="whylink" onclick="toggleWhy(this)"
 var PAGES_C={
  dashboard:function(){var nome=(((VZ.user&&VZ.user.nome)||'').split(' ')[0])||'';return '<div class="wrap">'
   +'<div class="page-h"><div><h1 id="dashHello">Bem-vindo'+(nome?', '+nome:'')+'! 👋</h1><p>Acompanhe seu perfil e suas oportunidades.</p></div>'
-  +'<div style="display:flex;gap:10px"><button class="btn ghost" onclick="navTo(\'perfil\')">✦ Melhorar com IA</button><button class="btn dark" onclick="navTo(\'vagas\')">Ver Vagas Recomendadas</button></div></div>'
+  +'<div style="display:flex;gap:10px"><button class="btn ghost" onclick="obInit()">✦ Completar cadastro</button><button class="btn dark" onclick="navTo(\'vagas\')">Ver Vagas Recomendadas</button></div></div>'
   +'<div class="grid kpis">'
    +kpi('i-blue','◎','—','Visualizações','','kcViews')
    +kpi('i-purple','▣','—','Empresas interessadas','','kcInteressadas')
