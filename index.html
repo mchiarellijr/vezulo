@@ -263,6 +263,14 @@
   }
   @media(max-width:600px){.kpis{grid-template-columns:1fr 1fr}.search{display:none}.roi{grid-template-columns:1fr}.formgrid{grid-template-columns:1fr}}
 
+  /* ---------- VERIFY BANNER ---------- */
+  .verify-banner{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--orange-bg);border:1px solid #f0d9ac;color:#8a5a13;border-radius:13px;padding:12px 16px;margin:0 0 18px;font-size:13.5px}
+  .verify-banner b{font-weight:700}
+  .verify-banner .vb-actions{margin-left:auto;display:flex;gap:8px}
+  .verify-banner button{border:0;border-radius:9px;padding:7px 13px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit}
+  .verify-banner .vb-resend{background:var(--orange-2);color:#fff}
+  .verify-banner .vb-x{background:transparent;color:#8a5a13;padding:7px 8px}
+
   /* ---------- APP FOOTER ---------- */
   .app-footer{margin:40px 0 0;padding:28px 24px 22px;border-top:1px solid var(--line);color:var(--muted)}
   .app-footer .cols{display:flex;flex-wrap:wrap;gap:32px 60px;max-width:1100px}
@@ -322,7 +330,7 @@
       </div>
       <div class="field"><label>Email</label><div class="inp"><span class="ic">✉</span><input id="loginEmail" type="email" placeholder="voce@email.com"></div></div>
       <div class="field"><label>Senha</label><div class="inp"><span class="ic">🔒</span><input id="loginSenha" type="password" placeholder="••••••••"></div></div>
-      <div class="row-between"><span></span><button class="link" onclick="alertMsg('Fluxo “Esqueci minha senha” — protótipo')">Esqueci minha senha</button></div>
+      <div class="row-between"><span></span><button class="link" onclick="go('forgot')">Esqueci minha senha</button></div>
       <button class="btn primary block lg" onclick="doLogin()">Entrar</button>
       <div id="adminNote" class="note hidden" style="margin-top:14px">🔒 Painel administrativo — em desenvolvimento (Fase 3).</div>
       <div id="loginSocial">
@@ -333,6 +341,46 @@
         </div>
       </div>
       <div class="auth-foot">Não tem conta? <button class="link" onclick="go('signup')">Criar conta grátis</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= ESQUECI A SENHA ================= -->
+<div id="scr-forgot" class="auth hidden">
+  <div class="auth-art">
+    <div class="brand"><div class="logo">V</div><div><b>VEZULO</b></div></div>
+    <h2>Recuperar acesso<br>é rápido.</h2>
+    <p>Informe o e-mail da sua conta e enviaremos um link para você criar uma nova senha.</p>
+    <div class="mini">✓ Link seguro &nbsp;·&nbsp; ✓ Válido por 1 hora</div>
+  </div>
+  <div class="auth-form">
+    <div class="auth-box">
+      <h3>Esqueci minha senha</h3>
+      <div class="sub">Enviaremos um link de redefinição para o seu e-mail.</div>
+      <div class="field"><label>Email</label><div class="inp"><span class="ic">✉</span><input id="fgEmail" type="email" placeholder="voce@email.com" onkeydown="if(event.key==='Enter')doForgot()"></div></div>
+      <button class="btn primary block lg" id="fgBtn" onclick="doForgot()">Enviar link de redefinição</button>
+      <div id="fgDone" class="note hidden" style="margin-top:14px;background:var(--green-bg);color:#12996a">✓ Se houver uma conta com este e-mail, o link já está a caminho. Verifique sua caixa de entrada (e o spam).</div>
+      <div class="auth-foot"><button class="link" onclick="go('login')">← Voltar para o login</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= REDEFINIR SENHA ================= -->
+<div id="scr-reset" class="auth hidden">
+  <div class="auth-art">
+    <div class="brand"><div class="logo">V</div><div><b>VEZULO</b></div></div>
+    <h2>Crie uma nova<br>senha.</h2>
+    <p>Escolha uma senha nova e segura para voltar a acessar sua conta Vezulo.</p>
+    <div class="mini">✓ Mínimo de 6 caracteres</div>
+  </div>
+  <div class="auth-form">
+    <div class="auth-box">
+      <h3>Definir nova senha</h3>
+      <div class="sub">Digite e confirme sua nova senha.</div>
+      <div class="field"><label>Nova senha</label><div class="inp"><span class="ic">🔒</span><input id="rsSenha" type="password" placeholder="••••••••"></div></div>
+      <div class="field"><label>Confirmar nova senha</label><div class="inp"><span class="ic">🔒</span><input id="rsSenha2" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doReset()"></div></div>
+      <button class="btn primary block lg" id="rsBtn" onclick="doReset()">Salvar nova senha</button>
+      <div class="auth-foot"><button class="link" onclick="go('login')">← Voltar para o login</button></div>
     </div>
   </div>
 </div>
@@ -405,6 +453,7 @@
       <div id="vezusPill" class="vezus-pill hidden"><span class="v">V</span> 145 Vezus</div>
       <div class="who"><div class="av" id="avatarTop">J</div><div><b id="whoName">João Silva</b><small id="whoRole">Candidato</small></div></div>
     </div>
+    <div id="verifyBanner" class="verify-banner hidden"></div>
     <div id="pageContent"></div>
     <footer id="appFooter" class="app-footer"></footer>
   </div>
@@ -416,7 +465,7 @@ var state={screen:'landing', role:'C', page:'dashboard', loginRole:'C', signupRo
 
 function go(scr){
   state.screen=scr;
-  ['landing','login','signup','onboarding','app'].forEach(function(s){
+  ['landing','login','forgot','reset','signup','onboarding','app'].forEach(function(s){
     var el=document.getElementById('scr-'+s); if(el) el.classList.toggle('hidden', s!==scr);
   });
   if(scr==='signup') renderSignupFields();
@@ -697,6 +746,48 @@ function doLogin(){
     .catch(function(e){ alertMsg(e.message); });
 }
 
+/* ---- esqueci a senha ---- */
+function doForgot(){
+  var email=(val('fgEmail')||'').trim();
+  if(!email){ alertMsg('Informe o seu e-mail.'); return; }
+  var b=document.getElementById('fgBtn'); b.disabled=true; b.textContent='Enviando…';
+  api('/auth/forgot',{method:'POST',auth:false,body:{email:email}})
+    .then(function(){ document.getElementById('fgDone').classList.remove('hidden'); b.textContent='Link enviado ✓'; })
+    .catch(function(e){ b.disabled=false; b.textContent='Enviar link de redefinição'; alertMsg(e.message); });
+}
+var vzReset={uid:0,token:''};
+function doReset(){
+  var s1=val('rsSenha')||'', s2=val('rsSenha2')||'';
+  if(s1.length<6){ alertMsg('A nova senha precisa ter ao menos 6 caracteres.'); return; }
+  if(s1!==s2){ alertMsg('As senhas não conferem.'); return; }
+  var b=document.getElementById('rsBtn'); b.disabled=true; b.textContent='Salvando…';
+  api('/auth/reset',{method:'POST',auth:false,body:{uid:vzReset.uid,token:vzReset.token,nova_senha:s1}})
+    .then(function(){ alertMsg('Senha redefinida! Faça login com a nova senha. ✓'); go('login'); })
+    .catch(function(e){ b.disabled=false; b.textContent='Salvar nova senha'; alertMsg(e.message); });
+}
+
+/* ---- links de e-mail: ?reset= e ?verify= ---- */
+function handleEmailLinks(){
+  var qs=(window.location&&window.location.search)||'';
+  var p=new URLSearchParams(qs);
+  // Redefinição de senha
+  if(p.get('reset') && p.get('uid')){
+    vzReset={uid:parseInt(p.get('uid'),10)||0, token:p.get('reset')};
+    try{ history.replaceState({},'',(window.location.pathname||'/')); }catch(e){}
+    go('reset'); return true;
+  }
+  // Confirmação de e-mail
+  if(p.get('verify') && p.get('uid')){
+    var uid=parseInt(p.get('uid'),10)||0, token=p.get('verify');
+    try{ history.replaceState({},'',(window.location.pathname||'/')); }catch(e){}
+    api('/auth/verify-email',{method:'POST',auth:false,body:{uid:uid,token:token}})
+      .then(function(d){ alertMsg((d&&d.msg)||'E-mail confirmado! ✓'); if(VZ.user){ var u=VZ.user; u.email_verified=true; VZ.user=u; refreshVerifyBanner(); } })
+      .catch(function(e){ alertMsg(e.message); });
+    // não retorna true: segue o boot normal (login ou app)
+  }
+  return false;
+}
+
 /* ---- signup ---- */
 function signupAs(r){ state.signupRole=r; go('signup'); pickSignup(r); }
 function pickSignup(r){ state.signupRole=r;
@@ -741,7 +832,23 @@ function enterApp(role){
   document.getElementById('whoName').textContent = nome;
   document.getElementById('whoRole').textContent = role==='E'?'Empresa':'Candidato';
   if(role==='E'){ api('/vezus/balance').then(function(b){ var p=document.getElementById('vezusPill'); if(p&&b){ p.innerHTML='<span class="v">V</span> '+b.saldo+' Vezus'; } }).catch(function(){}); }
-  buildNav(); renderPage(); renderAppFooter(); go('app');
+  buildNav(); renderPage(); renderAppFooter(); refreshVerifyBanner(); go('app');
+}
+
+/* ---- Banner "confirme seu e-mail" ---- */
+function refreshVerifyBanner(){
+  var el=document.getElementById('verifyBanner'); if(!el) return;
+  var u=VZ.user||{};
+  if(u.email_verified){ el.classList.add('hidden'); el.innerHTML=''; return; }
+  el.classList.remove('hidden');
+  el.innerHTML='<span>✉ <b>Confirme seu e-mail.</b> Enviamos um link para <b>'+esc(u.email||'seu e-mail')+'</b>. Verifique também o spam.</span>'
+    +'<span class="vb-actions"><button class="vb-resend" onclick="resendVerify(this)">Reenviar e-mail</button><button class="vb-x" onclick="this.closest(\'.verify-banner\').classList.add(\'hidden\')" title="Dispensar">×</button></span>';
+}
+function resendVerify(btn){
+  if(btn){ btn.disabled=true; btn.textContent='Enviando…'; }
+  api('/auth/resend-verification',{method:'POST'})
+    .then(function(d){ alertMsg((d&&d.msg)||'E-mail reenviado.'); if(btn){ btn.textContent='Enviado ✓'; } })
+    .catch(function(e){ if(btn){ btn.disabled=false; btn.textContent='Reenviar e-mail'; } alertMsg(e.message); });
 }
 
 /* ---- Rodapé do app (links institucionais vindos do WordPress) ---- */
@@ -773,6 +880,7 @@ function logout(){ VZ.token=null; VZ.user=null; go('landing'); }
 function vzBoot(){
   renderSignupFields();
   api('/oauth/status',{auth:false}).then(function(s){ vzOAuth=s; applyOAuthVisibility(); }).catch(function(){ vzOAuth={google:false,linkedin:false}; applyOAuthVisibility(); });
+  if(handleEmailLinks()) return;   // ?reset= abre a tela de redefinição
   if(handleOAuthCallback()) return;
   if(VZ.token && VZ.user){
     api('/auth/me').then(function(me){ VZ.user=me; enterApp(roleToCode(me.role)); })
