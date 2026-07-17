@@ -9,7 +9,10 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Vezulo">
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240'%3E%3Crect width='240' height='240' rx='52' fill='%234C2FBF'/%3E%3Cpath d='M60 66 L120 176' stroke='white' stroke-width='30' stroke-linecap='round'/%3E%3Cpath d='M180 66 L120 176' stroke='%239D7BFF' stroke-width='30' stroke-linecap='round'/%3E%3Ccircle cx='120' cy='174' r='19' fill='white'/%3E%3C/svg%3E">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="vezulo-apple-180.png">
+<link rel="apple-touch-icon" sizes="180x180" href="vezulo-apple-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="vezulo-icon-192.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240'%3E%3Crect width='240' height='240' rx='52' fill='%234C2FBF'/%3E%3Cpath d='M60 66 L120 176' stroke='white' stroke-width='30' stroke-linecap='round'/%3E%3Cpath d='M180 66 L120 176' stroke='%239D7BFF' stroke-width='30' stroke-linecap='round'/%3E%3Ccircle cx='120' cy='174' r='19' fill='white'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1463,54 +1466,81 @@ vzBoot();
       </div>
     </div>
     <!-- Android / navegadores com instalação nativa -->
-    <div id="a2hsAndroid" class="acts hidden">
-      <button class="btn ghost" onclick="a2hsDismiss()">Agora não</button>
-      <button class="btn primary" onclick="a2hsInstall()">Instalar app</button>
+    <div id="a2hsAndroid" class="a2v hidden">
+      <div class="acts">
+        <button class="btn ghost" onclick="a2hsDismiss()">Agora não</button>
+        <button class="btn primary" onclick="a2hsInstall()">Instalar app</button>
+      </div>
     </div>
-    <!-- iOS (Safari): tutorial -->
-    <div id="a2hsIOS" class="hidden">
+    <!-- iOS Safari: tutorial de compartilhar -->
+    <div id="a2hsIOS" class="a2v hidden">
       <div class="ios-steps">
         <div>1. Toque em <b>Compartilhar
           <svg class="share-ic" viewBox="0 0 24 24" fill="none" stroke="#4C2FBF" stroke-width="2"><path d="M12 3v13M12 3l-4 4M12 3l4 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 12v7a1 1 0 001 1h12a1 1 0 001-1v-7" stroke-linecap="round"/></svg>
-        </b> na barra do Safari.</div>
+        </b> na barra do navegador.</div>
         <div>2. Escolha <b>“Adicionar à Tela de Início”</b>.</div>
         <div>3. Toque em <b>Adicionar</b>. Pronto! 🎉</div>
+      </div>
+      <div class="acts"><button class="btn ghost" onclick="a2hsDismiss()">Entendi</button></div>
+    </div>
+    <!-- iOS fora do Safari: precisa abrir no Safari -->
+    <div id="a2hsIOSOther" class="a2v hidden">
+      <div class="ios-steps">
+        <div>No iPhone, a instalação só funciona pelo <b>Safari</b>.</div>
+        <div>1. Abra <b>vezulo.com.br</b> no <b>Safari</b>.</div>
+        <div>2. Toque em <b>Compartilhar
+          <svg class="share-ic" viewBox="0 0 24 24" fill="none" stroke="#4C2FBF" stroke-width="2"><path d="M12 3v13M12 3l-4 4M12 3l4 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 12v7a1 1 0 001 1h12a1 1 0 001-1v-7" stroke-linecap="round"/></svg>
+        </b> → <b>“Adicionar à Tela de Início”</b>.</div>
+      </div>
+      <div class="acts"><button class="btn ghost" onclick="a2hsDismiss()">Entendi</button></div>
+    </div>
+    <!-- Fallback genérico (Android sem prompt nativo / outros) -->
+    <div id="a2hsGeneric" class="a2v hidden">
+      <div class="ios-steps">
+        <div>1. Abra o menu do navegador (<b>⋮</b> ou <b>⋯</b>).</div>
+        <div>2. Toque em <b>“Instalar app”</b> ou <b>“Adicionar à tela inicial”</b>.</div>
       </div>
       <div class="acts"><button class="btn ghost" onclick="a2hsDismiss()">Entendi</button></div>
     </div>
   </div>
 </div>
 <script>
-/* ============ Lógica: adicionar à tela inicial ============ */
+/* ============ Lógica: adicionar à tela inicial (PWA) ============ */
 (function(){
   var KEY='vz_a2hs_dismissed';
   var deferredPrompt=null;
+  var shownOnce=false;
 
   function isStandalone(){
-    return window.matchMedia('(display-mode: standalone)').matches
-      || window.navigator.standalone===true; // iOS
+    try{
+      return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
+        || window.navigator.standalone===true; // iOS
+    }catch(e){ return false; }
   }
-  function isMobile(){
-    return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||'');
-  }
+  var UA=navigator.userAgent||'';
   function isIOS(){
-    return /iPhone|iPad|iPod/i.test(navigator.userAgent||'')
+    return /iPhone|iPad|iPod/i.test(UA)
       || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1); // iPad iOS13+
   }
-  function isSafari(){
-    var ua=navigator.userAgent||'';
-    return /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS|Chrome|Chromium/i.test(ua);
+  function isAndroid(){ return /Android/i.test(UA); }
+  function isMobile(){ return isIOS() || isAndroid() || /Mobile/i.test(UA); }
+  function isIOSSafari(){
+    // No iOS, "Safari de verdade" não tem CriOS/FxiOS/EdgiOS/OPT etc. no UA.
+    return isIOS() && !/CriOS|FxiOS|EdgiOS|EdgA|OPiOS|mercury|GSA/i.test(UA);
   }
   function dismissedRecently(){
     try{
       var t=parseInt(localStorage.getItem(KEY)||'0',10);
-      // Reaparece só depois de 14 dias.
-      return t && (Date.now()-t) < 14*24*60*60*1000;
+      return t && (Date.now()-t) < 14*24*60*60*1000; // reaparece após 14 dias
     }catch(e){ return false; }
+  }
+  function appVisible(){
+    var app=document.getElementById('scr-app');
+    return app && !app.classList.contains('hidden');
   }
 
   window.a2hsDismiss=function(){
-    document.getElementById('a2hs').classList.remove('show');
+    var s=document.getElementById('a2hs'); if(s) s.classList.remove('show');
     try{ localStorage.setItem(KEY, String(Date.now())); }catch(e){}
   };
   window.a2hsInstall=function(){
@@ -1519,54 +1549,41 @@ vzBoot();
     deferredPrompt.userChoice.then(function(){ deferredPrompt=null; window.a2hsDismiss(); });
   };
 
-  function showSheet(mode){
+  function reveal(variantId){
+    if(shownOnce) return;
     if(isStandalone() || dismissedRecently()) return;
-    // Só mostra quando o usuário está logado (dentro do app), não na landing/login.
-    var app=document.getElementById('scr-app');
-    if(!app || app.classList.contains('hidden')) return;
-    document.getElementById('a2hs'+(mode==='ios'?'IOS':'Android')).classList.remove('hidden');
-    setTimeout(function(){ document.getElementById('a2hs').classList.add('show'); }, 400);
+    var v=document.getElementById(variantId); if(!v) return;
+    // esconde as outras variantes
+    var all=document.querySelectorAll('#a2hs .a2v');
+    for(var i=0;i<all.length;i++){ all[i].classList.add('hidden'); }
+    v.classList.remove('hidden');
+    shownOnce=true;
+    setTimeout(function(){ var s=document.getElementById('a2hs'); if(s) s.classList.add('show'); }, 350);
   }
 
-  // Android/Chrome: evento nativo de instalação.
+  // Decide qual variante mostrar quando o app estiver visível (usuário logado).
+  function decide(){
+    if(isStandalone() || dismissedRecently() || !isMobile()) return;
+    if(deferredPrompt){ reveal('a2hsAndroid'); return; }        // Android/Chrome com prompt nativo
+    if(isIOSSafari()){ reveal('a2hsIOS'); return; }             // iPhone no Safari → tutorial
+    if(isIOS()){ reveal('a2hsIOSOther'); return; }              // iPhone fora do Safari → abrir no Safari
+    reveal('a2hsGeneric');                                       // Android sem prompt / outros
+  }
+
+  // Espera o app ficar visível (login) e então decide. Tenta por ~15s.
+  var tries=0;
+  var iv=setInterval(function(){
+    tries++;
+    if(appVisible()){ clearInterval(iv); setTimeout(decide, 800); }
+    else if(tries>30){ clearInterval(iv); }
+  }, 500);
+
+  // Android/Chrome: captura o evento nativo (pode chegar depois).
   window.addEventListener('beforeinstallprompt', function(e){
     e.preventDefault(); deferredPrompt=e;
-    if(isMobile()) tryShow('android');
+    if(!shownOnce && appVisible()) decide();
   });
-  // Se já instalou, some.
   window.addEventListener('appinstalled', function(){ try{ localStorage.setItem(KEY, String(Date.now())); }catch(e){} });
-
-  function tryShow(mode){
-    // Espera o app estar visível (usuário logado). Tenta por até ~10s.
-    var tries=0;
-    var iv=setInterval(function(){
-      tries++;
-      var app=document.getElementById('scr-app');
-      if(app && !app.classList.contains('hidden')){ clearInterval(iv); showSheet(mode); }
-      else if(tries>20){ clearInterval(iv); }
-    }, 500);
-  }
-
-  // iOS Safari não dispara beforeinstallprompt → mostra tutorial.
-  if(isMobile() && isIOS() && isSafari() && !isStandalone()){
-    tryShow('ios');
-  }
-
-  // Manifest dinâmico (data URI) — mesmo ícone/tema em um app single-file.
-  try{
-    var icon="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240'%3E%3Crect width='240' height='240' rx='52' fill='%234C2FBF'/%3E%3Cpath d='M60 66 L120 176' stroke='white' stroke-width='30' stroke-linecap='round'/%3E%3Cpath d='M180 66 L120 176' stroke='%239D7BFF' stroke-width='30' stroke-linecap='round'/%3E%3Ccircle cx='120' cy='174' r='19' fill='white'/%3E%3C/svg%3E";
-    var manifest={
-      name:'Vezulo', short_name:'Vezulo', start_url:'.', scope:'.',
-      display:'standalone', background_color:'#F5F3FF', theme_color:'#4C2FBF',
-      icons:[
-        {src:icon, sizes:'192x192', type:'image/svg+xml', purpose:'any maskable'},
-        {src:icon, sizes:'512x512', type:'image/svg+xml', purpose:'any maskable'}
-      ]
-    };
-    var blob=new Blob([JSON.stringify(manifest)],{type:'application/manifest+json'});
-    var link=document.createElement('link'); link.rel='manifest'; link.href=URL.createObjectURL(blob);
-    document.head.appendChild(link);
-  }catch(e){}
 })();
 </script>
 </body>

@@ -1,0 +1,17 @@
+{
+  "name": "Vezulo — Conexões inteligentes",
+  "short_name": "Vezulo",
+  "description": "Recrutamento com match por IA explicável. Empresas e talentos conectados.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F5F3FF",
+  "theme_color": "#4C2FBF",
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "vezulo-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "vezulo-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "vezulo-icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
