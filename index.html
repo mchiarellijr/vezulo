@@ -575,15 +575,35 @@ function locFillCidades(idCid, uf, selected){
     if(selected && lista.indexOf(selected)===-1){ var o=document.createElement('option'); o.value=selected; o.textContent=selected; o.selected=true; el.appendChild(o); }
   }
   if(!uf){ el.innerHTML='<option value="">Selecione o estado primeiro</option>'; return; }
-  if(vzCidadesCache[uf]){ render(vzCidadesCache[uf]); return; }
+  if(vzCidadesCache[uf] && vzCidadesCache[uf].length){ render(vzCidadesCache[uf]); return; }
   el.innerHTML='<option value="">Carregando…</option>';
-  fetch('https://servicedados.ibge.gov.br/api/v1/localidades/estados/'+uf+'/municipios?orderBy=nome')
-    .then(function(r){return r.json();})
-    .then(function(arr){ var lista=(arr||[]).map(function(m){return m.nome;}); vzCidadesCache[uf]=lista; render(lista); })
-    .catch(function(){ // fallback: deixa digitar livremente
-      el.innerHTML='<option value="">(não foi possível carregar — digite manualmente)</option>';
-      if(selected){ var o=document.createElement('option'); o.value=selected; o.textContent=selected; o.selected=true; el.appendChild(o); }
+
+  // Duas fontes com timeout; se ambas falharem, vira campo de texto livre.
+  function tryFetch(url, parse){
+    return new Promise(function(resolve,reject){
+      var done=false, to=setTimeout(function(){ if(!done){done=true;reject();} },7000);
+      fetch(url).then(function(r){ if(!r.ok) throw 0; return r.json(); })
+        .then(function(j){ if(done)return; done=true; clearTimeout(to); var l=parse(j)||[]; if(l.length) resolve(l); else reject(); })
+        .catch(function(){ if(done)return; done=true; clearTimeout(to); reject(); });
     });
+  }
+  tryFetch('https://servicedados.ibge.gov.br/api/v1/localidades/estados/'+uf+'/municipios?orderBy=nome', function(a){ return (a||[]).map(function(m){return m.nome;}); })
+    .catch(function(){ return tryFetch('https://api.kstrtech.com.br/cidades/'+uf.toLowerCase(), function(j){
+        // aceita vários formatos possíveis
+        if(Array.isArray(j)) return j.map(function(x){ return (typeof x==='string')?x:(x.nome||x.cidade||x.name||''); }).filter(Boolean);
+        if(j && Array.isArray(j.cidades)) return j.cidades.map(function(x){ return (typeof x==='string')?x:(x.nome||x.name||''); }).filter(Boolean);
+        return [];
+      }); })
+    .then(function(lista){ lista=lista.sort(function(a,b){return a.localeCompare(b,'pt-BR');}); vzCidadesCache[uf]=lista; render(lista); })
+    .catch(function(){ locCidadeTexto(idCid, selected); });
+}
+/* Fallback: troca o <select> de cidade por um <input> de texto livre. */
+function locCidadeTexto(idCid, valorAtual){
+  var el=document.getElementById(idCid); if(!el) return;
+  var inp=document.createElement('input');
+  inp.className=el.className; inp.id=el.id; inp.type='text';
+  inp.placeholder='Digite sua cidade'; inp.value=valorAtual||'';
+  el.parentNode.replaceChild(inp, el);
 }
 function locOnUF(idUF, idCid){ var uf=val(idUF); locFillCidades(idCid, uf, ''); }
 /* Chame após inserir os selects no DOM, para carregar a cidade salva. */
