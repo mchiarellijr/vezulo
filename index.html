@@ -110,6 +110,7 @@
   .side-foot a{color:#b9c2e2;padding:9px 11px;display:flex;gap:11px;align-items:center;font-size:13.5px;cursor:pointer}
 
   .main{flex:1;min-width:0;display:flex;flex-direction:column}
+  #pageContent{flex:1 0 auto}
   .top{height:62px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:16px;padding:0 26px;position:sticky;top:0;z-index:5}
   .search{flex:1;max-width:340px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 13px;color:var(--muted);font-size:13px}
   .top .spacer{flex:1}
@@ -212,8 +213,29 @@
   .formgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
   .formgrid .full{grid-column:1/-1}
   .lbl{font-size:12.5px;font-weight:600;color:#42506e;margin-bottom:6px;display:block}
-  .inp2{border:1px solid var(--line);border-radius:11px;padding:11px 13px;font-size:13.5px;color:var(--ink);width:100%;background:#fff}
+  .inp2{border:1px solid var(--line);border-radius:11px;padding:11px 13px;font-size:13.5px;color:var(--ink);width:100%;background:#fff;font-family:inherit}
+  select.inp2{cursor:pointer;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B6483' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center;background-size:16px;padding-right:34px}
+  .inp2[type="month"]::-webkit-calendar-picker-indicator{cursor:pointer;opacity:.6}
+  .inp2:focus{outline:none;border-color:var(--blue-2);box-shadow:0 0 0 3px rgba(91,61,239,.12)}
+  .chk-inline{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);margin-top:8px;cursor:pointer}
+  .chk-inline input{width:16px;height:16px;accent-color:var(--blue-2);cursor:pointer}
   textarea.inp2{min-height:90px;resize:vertical;font-family:inherit}
+  /* habilidades */
+  .hs-add{display:flex;gap:8px;flex-wrap:wrap}
+  .hs-add input{flex:1;min-width:160px}
+  .hs-add select{max-width:110px}
+  .hardrow{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f2eefb}
+  .hardrow:last-child{border-bottom:0}
+  .hardrow .hn{font-size:13.5px;font-weight:600;min-width:120px;flex-shrink:0}
+  .hardrow .hsegs{display:flex;gap:3px;flex:1}
+  .hardrow .hsegs i{height:8px;flex:1;border-radius:3px;background:#ece7f8}
+  .hardrow .hsegs i.on{background:linear-gradient(90deg,var(--blue-2),var(--blue-3))}
+  .hardrow .hscore{font-size:12.5px;font-weight:700;color:var(--blue-2);min-width:38px;text-align:right}
+  .soft-grid{display:flex;flex-wrap:wrap;gap:9px}
+  .soft-chip{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:20px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;transition:.14s;font-family:inherit}
+  .soft-chip:hover{border-color:var(--blue-3)}
+  .soft-chip.on{background:var(--blue-soft);border-color:var(--blue-2);color:var(--blue-2);font-weight:600}
+  @media(max-width:600px){.hardrow{flex-wrap:wrap}.hardrow .hn{min-width:100%}}
   .skillbar{display:grid;grid-template-columns:120px 1fr 44px;gap:12px;align-items:center;margin:12px 0;font-size:13px}
   .toggle{width:42px;height:24px;border-radius:20px;background:var(--blue-2);position:relative;flex-shrink:0}
   .toggle::after{content:"";position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:3px;right:3px}
@@ -326,13 +348,11 @@
       <div class="roletabs" id="loginTabs">
         <button class="on" data-r="C" onclick="pickLogin('C')">👤 Candidato</button>
         <button data-r="E" onclick="pickLogin('E')">🏢 Empresa</button>
-        <button data-r="A" onclick="pickLogin('A')">🔒 Admin</button>
       </div>
       <div class="field"><label>Email</label><div class="inp"><span class="ic">✉</span><input id="loginEmail" type="email" placeholder="voce@email.com"></div></div>
       <div class="field"><label>Senha</label><div class="inp"><span class="ic">🔒</span><input id="loginSenha" type="password" placeholder="••••••••"></div></div>
       <div class="row-between"><span></span><button class="link" onclick="go('forgot')">Esqueci minha senha</button></div>
       <button class="btn primary block lg" onclick="doLogin()">Entrar</button>
-      <div id="adminNote" class="note hidden" style="margin-top:14px">🔒 Painel administrativo — em desenvolvimento (Fase 3).</div>
       <div id="loginSocial">
         <div class="divider">ou continue com</div>
         <div class="oauth">
@@ -535,6 +555,39 @@ function applyOAuthVisibility(){
 }
 /* ============ ONBOARDING DO CANDIDATO ============ */
 var UFS=['','AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
+
+/* ============ Cidade × Estado (IBGE) ============ */
+var vzCidadesCache={};
+function ufOptions(sel){ return UFS.map(function(u){ return '<option value="'+u+'"'+(String(sel||'')===u?' selected':'')+'>'+(u||'UF')+'</option>'; }).join(''); }
+/* Monta selects vinculados de Estado + Cidade dentro de um container.
+   ids: {uf:'idUF', cid:'idCidade'} ; valores iniciais opcionais. */
+function locSelectsHTML(idUF, idCid, ufVal, cidVal, labels){
+  labels=labels||['Estado (UF)','Cidade'];
+  return '<div><label class="lbl">'+labels[0]+'</label><select class="inp2" id="'+idUF+'" onchange="locOnUF(\''+idUF+'\',\''+idCid+'\')">'+ufOptions(ufVal)+'</select></div>'
+    +'<div><label class="lbl">'+labels[1]+'</label><select class="inp2" id="'+idCid+'"><option value="">'+(ufVal?'Carregando…':'Selecione o estado primeiro')+'</option></select></div>';
+}
+function locFillCidades(idCid, uf, selected){
+  var el=document.getElementById(idCid); if(!el) return;
+  function render(lista){
+    el.innerHTML='<option value="">'+(lista.length?'Selecione…':'—')+'</option>'
+      +lista.map(function(c){ return '<option value="'+esc(c)+'"'+(c===selected?' selected':'')+'>'+esc(c)+'</option>'; }).join('');
+    // Se o valor salvo não está na lista (ex: cidade antiga digitada), adiciona.
+    if(selected && lista.indexOf(selected)===-1){ var o=document.createElement('option'); o.value=selected; o.textContent=selected; o.selected=true; el.appendChild(o); }
+  }
+  if(!uf){ el.innerHTML='<option value="">Selecione o estado primeiro</option>'; return; }
+  if(vzCidadesCache[uf]){ render(vzCidadesCache[uf]); return; }
+  el.innerHTML='<option value="">Carregando…</option>';
+  fetch('https://servicedados.ibge.gov.br/api/v1/localidades/estados/'+uf+'/municipios?orderBy=nome')
+    .then(function(r){return r.json();})
+    .then(function(arr){ var lista=(arr||[]).map(function(m){return m.nome;}); vzCidadesCache[uf]=lista; render(lista); })
+    .catch(function(){ // fallback: deixa digitar livremente
+      el.innerHTML='<option value="">(não foi possível carregar — digite manualmente)</option>';
+      if(selected){ var o=document.createElement('option'); o.value=selected; o.textContent=selected; o.selected=true; el.appendChild(o); }
+    });
+}
+function locOnUF(idUF, idCid){ var uf=val(idUF); locFillCidades(idCid, uf, ''); }
+/* Chame após inserir os selects no DOM, para carregar a cidade salva. */
+function locInit(idUF, idCid, ufVal, cidVal){ if(ufVal) locFillCidades(idCid, ufVal, cidVal||''); }
 var OB_TITLES=['Dados pessoais','Sobre você','Formação e experiência','Habilidades e idiomas','Objetivos profissionais','Diversidade'];
 var OB_SCALARS=['nome','cpf','nacionalidade','data_nascimento','telefone','cidade','estado','sexo','estado_civil','pcd','receber_mensagens',
   'cargo_desejado','resumo','linkedin','portfolio','instagram','facebook','jornada','contrato','nivel_min','nivel_max','salario_min','salario_max',
@@ -551,24 +604,30 @@ function obTitles(){ return obState.role==='E'?OB_TITLES_E:OB_TITLES; }
 function obInit(role){
   role=(role==='E'||role==='empresa')?'E':((role==='C'||role==='candidato')?'C':(roleToCode((VZ.user&&VZ.user.role)||'candidato')));
   obState={role:role,step:0,data:{},formacao:[],experiencia:[],idiomas:[{idioma:'Português',nivel:'Nativo'}],hard:[],soft:[],conhecimentos:[],estados:[],cnh:[]};
-  go('onboarding');
-  document.getElementById('obBody').innerHTML='<p class="muted">Carregando…</p>';
   var head=document.getElementById('obHead'), sub=document.getElementById('obSub');
   if(role==='E'){
     if(head) head.textContent='Vamos completar o perfil da empresa';
     if(sub) sub.textContent='Perfis completos passam mais confiança e atraem candidatos melhores. Você pode pular e completar depois.';
-    api('/company/profile').catch(function(){return{};}).then(function(p){
-      obState.data=p||{};
-      if(!obState.data.razao_social) obState.data.razao_social=(VZ.user&&VZ.user.nome)||'';
-      renderOnboarding();
-    });
+    obState.data.razao_social=(VZ.user&&VZ.user.nome)||'';
+  } else {
+    if(head) head.textContent='Vamos montar seu perfil';
+    if(sub) sub.textContent='Quanto mais completo, mais empresas te encontram. Você pode pular e completar depois.';
+    obState.data.nome=(VZ.user&&VZ.user.nome)||'';
+    obState.data.nacionalidade='Brasileira';
+  }
+  // Mostra o wizard IMEDIATAMENTE (não depende de nenhuma chamada de API).
+  go('onboarding');
+  try{ renderOnboarding(); }catch(e){}
+  // Depois, hidrata com dados já salvos (se houver), sem travar a transição.
+  if(role==='E'){
+    api('/company/profile').then(function(p){
+      if(p&&typeof p==='object'){ Object.keys(p).forEach(function(k){ if(p[k]!=null&&p[k]!=='') obState.data[k]=p[k]; }); if(!obState.data.razao_social) obState.data.razao_social=(VZ.user&&VZ.user.nome)||''; renderOnboarding(); }
+    }).catch(function(){});
     return;
   }
-  if(head) head.textContent='Vamos montar seu perfil';
-  if(sub) sub.textContent='Quanto mais completo, mais empresas te encontram. Você pode pular e completar depois.';
   Promise.all([api('/candidate/profile').catch(function(){return{};}), api('/candidate/skills').catch(function(){return{hard:[],soft:[]};})]).then(function(r){
     var p=r[0]||{}, sk=r[1]||{};
-    obState.data=p||{};
+    if(p&&typeof p==='object'){ Object.keys(p).forEach(function(k){ if(p[k]!=null&&p[k]!=='') obState.data[k]=p[k]; }); }
     obState.hard=(sk&&sk.hard)||[]; obState.soft=(sk&&sk.soft)||[];
     if(Array.isArray(p.idiomas)&&p.idiomas.length) obState.idiomas=p.idiomas;
     if(Array.isArray(p.conhecimentos)) obState.conhecimentos=p.conhecimentos;
@@ -577,7 +636,7 @@ function obInit(role){
     if(!obState.data.nome) obState.data.nome=(VZ.user&&VZ.user.nome)||'';
     if(!obState.data.nacionalidade) obState.data.nacionalidade='Brasileira';
     renderOnboarding();
-  });
+  }).catch(function(){});
 }
 function of(key,label,type){return '<div><label class="lbl">'+label+'</label><input class="inp2" id="ob_'+key+'" '+(type?'type="'+type+'"':'')+' value="'+esc(obState.data[key]||'')+'"></div>';}
 function oarea(key,label){return '<div class="full"><label class="lbl">'+label+'</label><textarea class="inp2" id="ob_'+key+'">'+esc(obState.data[key]||'')+'</textarea></div>';}
@@ -591,6 +650,8 @@ function renderOnboarding(){
   document.getElementById('obBody').innerHTML=(obState.role==='E')?obStepHTML_E(obState.step):obStepHTML(obState.step);
   document.getElementById('obBack').style.visibility=obState.step===0?'hidden':'visible';
   document.getElementById('obNext').textContent=(obState.step===T.length-1)?'Concluir ✓':'Próximo →';
+  // Carrega a cidade salva se o passo tiver os selects de localidade.
+  if(document.getElementById('ob_estado')){ locInit('ob_estado','ob_cidade',obState.data.estado,obState.data.cidade); }
 }
 function obStepHTML_E(i){
   if(i===0){ return '<h3 style="margin-bottom:4px">1. Dados da empresa</h3><p class="muted" style="margin-bottom:14px">O CNPJ é único por empresa e não pode ser alterado depois de definido.</p><div class="formgrid">'
@@ -601,7 +662,7 @@ function obStepHTML_E(i){
     +of('ano_fundacao','Ano de fundação')
     +'</div>'; }
   if(i===1){ return '<h3 style="margin-bottom:14px">2. Contato e presença online</h3><div class="formgrid">'
-    +of('cidade','Cidade')+osel('estado','Estado (UF)',UFS)
+    +locSelectsHTML('ob_estado','ob_cidade',obState.data.estado,obState.data.cidade)
     +of('telefone','Telefone')+of('website','Site')
     +of('linkedin','LinkedIn')+of('instagram','Instagram')
     +of('facebook','Facebook')
@@ -616,8 +677,8 @@ function obStepHTML(i){
   if(i===0){ return '<h3 style="margin-bottom:4px">1. Dados pessoais</h3><p class="muted" style="margin-bottom:14px">Garantimos a segurança e a confidencialidade dos seus dados.</p><div class="formgrid">'
     +of('nome','Nome completo')+of('cpf','CPF')
     +of('nacionalidade','Nacionalidade')+of('data_nascimento','Data de nascimento','date')
-    +of('telefone','Telefone')+of('cidade','Cidade')
-    +osel('estado','Estado (UF)',UFS)
+    +of('telefone','Telefone')
+    +locSelectsHTML('ob_estado','ob_cidade',obState.data.estado,obState.data.cidade)
     +osel('sexo','Sexo',['','Feminino','Masculino','Não especificado'])
     +osel('estado_civil','Estado civil',['','Solteiro(a)','Casado(a)','Viúvo(a)','Separado(a)','Divorciado(a)','Não especificado'])
     +osel('pcd','Pessoa com deficiência?',['','Não','Sim'])
@@ -733,11 +794,9 @@ function handleOAuthCallback(){
 
 /* ---- login ---- */
 function pickLogin(r){ state.loginRole=r;
-  document.querySelectorAll('#loginTabs button').forEach(function(b){b.classList.toggle('on',b.dataset.r===r); b.classList.toggle('dark',r==='A'&&b.dataset.r==='A');});
-  document.getElementById('adminNote').classList.toggle('hidden', r!=='A');
+  document.querySelectorAll('#loginTabs button').forEach(function(b){b.classList.toggle('on',b.dataset.r===r);});
 }
 function doLogin(){
-  if(state.loginRole==='A'){ alertMsg('Painel admin em desenvolvimento (Fase 3).'); return; }
   var email=(val('loginEmail')||'').trim(), senha=val('loginSenha')||'';
   if(!email||!senha){ alertMsg('Preencha e-mail e senha.'); return; }
   alertMsg('Entrando…');
@@ -944,35 +1003,81 @@ function vzHydrate(){
 }
 
 /* ---- CRUD genérico do currículo (experiências, formação, certificados) ---- */
+/* Cada campo: {k:chave, l:rótulo, t:tipo, ...}. Tipos: text, ta, month, select, year. */
+var NIVEIS_FORM=['Ensino Fundamental','Ensino Médio','Curso Técnico','Curso Tecnólogo','Graduação','Pós-graduação','MBA','Mestrado','Doutorado','Pós-doutorado','Curso Livre'];
+function anosLista(desde){ var y=(new Date()).getFullYear()+6, out=[]; for(var a=y;a>=(desde||1965);a--){ out.push(String(a)); } return out; }
 var COLL={
-  experiencias:{ep:'/candidate/experience',key:'cargo',fields:[['cargo','Cargo'],['empresa','Empresa'],['inicio','Início (ex: Jan 2021)'],['fim','Fim (ex: Presente)'],['descricao','Descrição','ta']]},
-  formacao:{ep:'/candidate/education',key:'curso',fields:[['curso','Curso'],['instituicao','Instituição'],['nivel','Nível (ex: Graduação)'],['ano_conclusao','Ano de conclusão']]},
-  certificados:{ep:'/candidate/certifications',key:'nome',fields:[['nome','Nome'],['emissor','Emissor'],['data','Data (ex: Jan 2024)'],['url','Link (URL)']]}
+  experiencias:{ep:'/candidate/experience',key:'cargo',icon:'▤',fields:[
+    {k:'cargo',l:'Cargo',t:'text'},
+    {k:'empresa',l:'Empresa',t:'text'},
+    {k:'inicio',l:'Início',t:'month'},
+    {k:'fim',l:'Fim',t:'month',currentToggle:true},
+    {k:'descricao',l:'Descrição das atividades',t:'ta'}
+  ]},
+  formacao:{ep:'/candidate/education',key:'curso',icon:'◑',fields:[
+    {k:'curso',l:'Curso',t:'text'},
+    {k:'instituicao',l:'Instituição',t:'text'},
+    {k:'nivel',l:'Nível',t:'select',opts:NIVEIS_FORM},
+    {k:'ano_conclusao',l:'Ano de conclusão',t:'select',opts:anosLista(1965)}
+  ]},
+  certificados:{ep:'/candidate/certifications',key:'nome',icon:'❏',fields:[
+    {k:'nome',l:'Nome',t:'text'},
+    {k:'emissor',l:'Emissor',t:'text'},
+    {k:'data',l:'Data',t:'month'},
+    {k:'url',l:'Link (URL)',t:'text'}
+  ]}
 };
+function collField(f){
+  var id='cf_'+f.k, wide=(f.t==='ta')?' full':'';
+  var inner;
+  if(f.t==='ta'){ inner='<textarea class="inp2" id="'+id+'" rows="3"></textarea>'; }
+  else if(f.t==='select'){ inner='<select class="inp2" id="'+id+'"><option value="">Selecione…</option>'+f.opts.map(function(o){return '<option value="'+esc(o)+'">'+esc(o)+'</option>';}).join('')+'</select>'; }
+  else if(f.t==='month'){ inner='<input class="inp2" id="'+id+'" type="month">'; }
+  else { inner='<input class="inp2" id="'+id+'">'; }
+  var toggle='';
+  if(f.currentToggle){
+    toggle='<label class="chk-inline"><input type="checkbox" id="cf_atual" onchange="collToggleAtual(this)"> Trabalho atualmente aqui</label>';
+  }
+  return '<div class="'+wide.trim()+'"><label class="lbl">'+f.l+'</label>'+inner+toggle+'</div>';
+}
+function collToggleAtual(cb){
+  var fim=document.getElementById('cf_fim'); if(!fim) return;
+  fim.disabled=cb.checked; if(cb.checked){ fim.value=''; fim.style.opacity=.5; } else { fim.style.opacity=1; }
+}
 function collFormToggle(){var f=document.getElementById('collForm'); if(f) f.style.display=(f.style.display==='none'?'block':'none');}
 function hydrateCollection(page){
   var cfg=COLL[page], fb=document.getElementById('collFormBody');
   if(fb){ fb.innerHTML='<h3 style="margin-bottom:10px">Novo registro</h3><div class="formgrid">'
-    +cfg.fields.map(function(f){var id='cf_'+f[0];return f[2]==='ta'
-      ?'<div class="full"><label class="lbl">'+f[1]+'</label><textarea class="inp2" id="'+id+'"></textarea></div>'
-      :'<div><label class="lbl">'+f[1]+'</label><input class="inp2" id="'+id+'"></div>';}).join('')
+    +cfg.fields.map(collField).join('')
     +'</div><div style="margin-top:12px;display:flex;gap:8px"><button class="btn primary" onclick="collSave(\''+page+'\')">Salvar</button><button class="btn ghost" onclick="collFormToggle()">Cancelar</button></div>'; }
   var b=document.getElementById('collAddBtn'); if(b) b.onclick=collFormToggle;
   collReload(page);
+}
+function fmtMonth(v){ // "2021-03" -> "mar/2021"
+  if(!v) return ''; var m=(''+v).split('-'); if(m.length<2) return v;
+  var nomes=['','jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  return (nomes[parseInt(m[1],10)]||m[1])+'/'+m[0];
 }
 function collReload(page){var cfg=COLL[page];
   api(cfg.ep).then(function(list){var box=document.getElementById('collList'); if(!box) return;
     if(!list||!list.length){ box.innerHTML='<p class="muted">Nenhum registro ainda. Clique em “+ Adicionar”.</p>'; return; }
     box.innerHTML=list.map(function(it){
       var titulo=esc(it[cfg.key]||it.titulo||'Registro');
-      var meta=cfg.fields.slice(1).map(function(f){return it[f[0]];}).filter(Boolean).map(esc).join(' · ');
-      return '<div class="listcard"><div class="li">▤</div><div><h4>'+titulo+'</h4><div class="meta">'+meta+'</div></div><div class="actions"><button class="icobtn" title="Remover" onclick="collDelete(\''+page+'\','+it.id+')">🗑</button></div></div>';
+      var meta=cfg.fields.slice(1).map(function(f){
+        var v=it[f.k]; if(!v) return '';
+        if(f.t==='month') return fmtMonth(v);
+        return v;
+      }).filter(Boolean).map(esc).join(' · ');
+      if(page==='experiencias' && (it.atual==='1'||it.atual===1||it.atual===true)) meta=esc(fmtMonth(it.inicio))+' · Atual'+(it.empresa?(' · '+esc(it.empresa)):'');
+      return '<div class="listcard"><div class="li">'+cfg.icon+'</div><div><h4>'+titulo+'</h4><div class="meta">'+meta+'</div></div><div class="actions"><button class="icobtn" title="Remover" onclick="collDelete(\''+page+'\','+it.id+')">🗑</button></div></div>';
     }).join('');
   }).catch(function(){});
 }
 function collSave(page){var cfg=COLL[page], body={};
-  cfg.fields.forEach(function(f){ body[f[0]]=val('cf_'+f[0]); });
-  if(!body[cfg.key]){ alertMsg('Preencha ao menos o campo principal.'); return; }
+  cfg.fields.forEach(function(f){ body[f.k]=val('cf_'+f.k); });
+  var atualCb=document.getElementById('cf_atual');
+  if(page==='experiencias' && atualCb && atualCb.checked){ body.atual='1'; body.fim=''; }
+  if(!body[cfg.key]){ alertMsg('Preencha ao menos o campo "'+cfg.fields[0].l+'".'); return; }
   api(cfg.ep,{method:'POST',body:body}).then(function(){ collFormToggle(); alertMsg('Adicionado! ✓'); collReload(page); }).catch(function(e){ alertMsg(e.message); });
 }
 function collDelete(page,id){ if(!confirm('Remover este registro?')) return; var cfg=COLL[page];
@@ -980,19 +1085,40 @@ function collDelete(page,id){ if(!confirm('Remover este registro?')) return; var
 }
 
 /* ---- Habilidades ---- */
+var SOFT_SUGERIDAS=['Comunicação','Trabalho em equipe','Liderança','Proatividade','Organização','Resolução de problemas','Pensamento crítico','Criatividade','Adaptabilidade','Gestão de tempo','Empatia','Negociação','Inteligência emocional','Foco em resultados','Atenção aos detalhes','Aprendizado contínuo'];
 var vzSkills={hard:[],soft:[]};
 function hydrateHabilidades(){
   api('/candidate/skills').then(function(s){ vzSkills={hard:(s&&s.hard)||[],soft:(s&&s.soft)||[]}; renderSkills(); }).catch(function(){ renderSkills(); });
   var b=document.getElementById('btnSaveSkills'); if(b) b.onclick=saveSkills;
 }
+function hs10(nivel){ return Math.round((Number(nivel)||0)/10); } // 0-100 -> 0-10
 function renderSkills(){
+  // HARD: barra de 10 segmentos + nota
   var hl=document.getElementById('hardList');
-  if(hl) hl.innerHTML=vzSkills.hard.length?vzSkills.hard.map(function(h,i){return '<div class="skillbar"><span>'+esc(h.nome)+'</span><div class="bar"><i style="width:'+(h.nivel||0)+'%"></i></div><span style="display:flex;gap:6px;align-items:center;justify-content:flex-end"><b>'+(h.nivel||0)+'%</b><button class="icobtn" style="width:24px;height:24px;line-height:1" onclick="skillDel(\'hard\','+i+')">×</button></span></div>';}).join(''):'<p class="muted">Nenhuma hard skill ainda.</p>';
-  var sl=document.getElementById('softList');
-  if(sl) sl.innerHTML=vzSkills.soft.length?vzSkills.soft.map(function(s,i){return '<span class="tag">'+esc(s)+' <b style="cursor:pointer" onclick="skillDel(\'soft\','+i+')">×</b></span>';}).join(''):'<p class="muted">Nenhuma soft skill ainda.</p>';
+  if(hl) hl.innerHTML=vzSkills.hard.length?vzSkills.hard.map(function(h,i){
+    var n=hs10(h.nivel), segs='';
+    for(var s=1;s<=10;s++){ segs+='<i class="'+(s<=n?'on':'')+'"></i>'; }
+    return '<div class="hardrow"><span class="hn">'+esc(h.nome)+'</span><div class="hsegs">'+segs+'</div>'
+      +'<span class="hscore">'+n+'/10</span><button class="icobtn" style="width:26px;height:26px" onclick="skillDel(\'hard\','+i+')">×</button></div>';
+  }).join(''):'<p class="muted">Nenhuma hard skill ainda. Adicione acima.</p>';
+  // SOFT: grid de chips marcáveis (sugeridas + as que o candidato já tem)
+  var sg=document.getElementById('softGrid');
+  if(sg){
+    var todas=SOFT_SUGERIDAS.slice();
+    vzSkills.soft.forEach(function(s){ if(todas.indexOf(s)===-1) todas.push(s); });
+    sg.innerHTML=todas.map(function(s){
+      var on=vzSkills.soft.indexOf(s)>-1;
+      return '<button type="button" class="soft-chip'+(on?' on':'')+'" onclick="softToggle('+JSON.stringify(s).replace(/"/g,'&quot;')+')">'+(on?'✓ ':'')+esc(s)+'</button>';
+    }).join('');
+  }
 }
-function skillAddHard(){var n=(val('hsNome')||'').trim(); if(!n) return; var lv=parseInt(val('hsNivel'),10); vzSkills.hard.push({nome:n,nivel:isNaN(lv)?70:Math.max(0,Math.min(100,lv))}); setVal('hsNome','');setVal('hsNivel',''); renderSkills();}
-function skillAddSoft(){var n=(val('ssNome')||'').trim(); if(!n) return; vzSkills.soft.push(n); setVal('ssNome',''); renderSkills();}
+function softToggle(nome){
+  var i=vzSkills.soft.indexOf(nome);
+  if(i>-1) vzSkills.soft.splice(i,1); else vzSkills.soft.push(nome);
+  renderSkills();
+}
+function skillAddHard(){var n=(val('hsNome')||'').trim(); if(!n) return; var lv=parseInt(val('hsNivel'),10); if(isNaN(lv))lv=7; vzSkills.hard.push({nome:n,nivel:Math.max(0,Math.min(10,lv))*10}); setVal('hsNome',''); renderSkills(); var el=document.getElementById('hsNome'); if(el) el.focus();}
+function skillAddSoft(){var n=(val('ssNome')||'').trim(); if(!n) return; if(vzSkills.soft.indexOf(n)===-1) vzSkills.soft.push(n); setVal('ssNome',''); renderSkills();}
 function skillDel(t,i){ vzSkills[t].splice(i,1); renderSkills(); }
 function saveSkills(){ api('/candidate/skills',{method:'PUT',body:vzSkills}).then(function(){ alertMsg('Habilidades salvas! ✓'); }).catch(function(e){ alertMsg(e.message); }); }
 
@@ -1034,6 +1160,87 @@ function hydrateCurriculo(){
   });
 }
 
+/* ---- Currículo em PDF (documento próprio, layout profissional) ---- */
+function gerarCurriculoPDF(){
+  alertMsg('Gerando currículo…');
+  Promise.all([
+    api('/candidate/profile').catch(function(){return {};}),
+    api('/candidate/skills').catch(function(){return {hard:[],soft:[]};}),
+    api('/candidate/experience').catch(function(){return [];}),
+    api('/candidate/education').catch(function(){return [];}),
+    api('/candidate/certifications').catch(function(){return [];})
+  ]).then(function(r){
+    var p=r[0]||{}, sk=r[1]||{hard:[],soft:[]}, exp=r[2]||[], edu=r[3]||[], cert=r[4]||[], u=VZ.user||{};
+    var nome=(p.nome||u.nome||'Currículo');
+    var loc=[p.cidade,p.estado].filter(Boolean).join(' - ');
+    var contatos=[u.email,p.telefone,loc,p.linkedin,p.portfolio].filter(Boolean);
+    function fm(v){ if(!v) return ''; var m=(''+v).split('-'); if(m.length<2) return v; var n=['','jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']; return (n[parseInt(m[1],10)]||m[1])+'/'+m[0]; }
+    function periodo(e){ var ini=fm(e.inicio); var fim=(e.atual==='1'||e.atual===1||e.atual===true)?'Atual':fm(e.fim); return [ini,fim].filter(Boolean).join(' — '); }
+
+    var hardH=((sk.hard)||[]).map(function(h){ var n=Math.round((Number(h.nivel)||0)/10); var dots=''; for(var d=1;d<=10;d++){dots+='<span class="dot'+(d<=n?' on':'')+'"></span>';} return '<div class="hs"><span class="hsn">'+esc(h.nome)+'</span><span class="dots">'+dots+'</span></div>'; }).join('');
+    var softH=((sk.soft)||[]).map(function(s){return '<span class="chip">'+esc(s)+'</span>';}).join('');
+    var expH=((exp)||[]).map(function(e){return '<div class="item"><div class="it-h"><b>'+esc(e.cargo||e.titulo||'')+'</b><span class="per">'+esc(periodo(e))+'</span></div><div class="it-s">'+esc(e.empresa||'')+'</div>'+(e.descricao?'<div class="it-d">'+esc(e.descricao)+'</div>':'')+'</div>';}).join('');
+    var eduH=((edu)||[]).map(function(e){return '<div class="item"><div class="it-h"><b>'+esc(e.curso||e.titulo||'')+'</b><span class="per">'+esc(e.ano_conclusao||'')+'</span></div><div class="it-s">'+[e.instituicao,e.nivel].filter(Boolean).map(esc).join(' · ')+'</div></div>';}).join('');
+    var certH=((cert)||[]).map(function(c){return '<div class="item"><div class="it-h"><b>'+esc(c.nome||c.titulo||'')+'</b><span class="per">'+esc(fm(c.data)||'')+'</span></div><div class="it-s">'+esc(c.emissor||'')+'</div></div>';}).join('');
+
+    var logo="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240'%3E%3Crect width='240' height='240' rx='52' fill='%234C2FBF'/%3E%3Cpath d='M60 66 L120 176' stroke='white' stroke-width='30' stroke-linecap='round'/%3E%3Cpath d='M180 66 L120 176' stroke='%239D7BFF' stroke-width='30' stroke-linecap='round'/%3E%3Ccircle cx='120' cy='174' r='19' fill='white'/%3E%3C/svg%3E";
+    var sec=function(t,c){ return c?('<section><h2>'+t+'</h2>'+c+'</section>'):''; };
+
+    var html='<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Currículo — '+esc(nome)+'</title>'
+      +'<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">'
+      +'<style>'
+      +'@page{size:A4;margin:0}'
+      +'*{margin:0;padding:0;box-sizing:border-box}'
+      +'body{font-family:Inter,Arial,sans-serif;color:#2A2340;font-size:11pt;line-height:1.5}'
+      +'.pg{width:210mm;min-height:297mm;margin:0 auto;background:#fff}'
+      +'.hd{background:#1A1030;color:#fff;padding:26px 30px;display:flex;align-items:center;gap:18px}'
+      +'.hd .lg{width:46px;height:46px;border-radius:12px;background:#fff;padding:4px}'
+      +'.hd h1{font-family:Sora,sans-serif;font-size:23pt;font-weight:800;letter-spacing:-.5px}'
+      +'.hd .cargo{color:#9D7BFF;font-weight:600;font-size:12pt;margin-top:2px}'
+      +'.hd .ct{color:#c7c0e0;font-size:9pt;margin-top:10px;line-height:1.7}'
+      +'.bd{padding:24px 30px}'
+      +'section{margin-bottom:18px;page-break-inside:avoid}'
+      +'h2{font-family:Sora,sans-serif;font-size:11pt;text-transform:uppercase;letter-spacing:1px;color:#4C2FBF;border-bottom:2px solid #EEE9FF;padding-bottom:5px;margin-bottom:11px}'
+      +'.resumo{font-size:10.5pt;color:#4a4460}'
+      +'.item{margin-bottom:12px;page-break-inside:avoid}'
+      +'.it-h{display:flex;justify-content:space-between;align-items:baseline;gap:12px}'
+      +'.it-h b{font-size:11pt;font-weight:700}'
+      +'.per{font-size:9pt;color:#8a84a0;white-space:nowrap;font-weight:600}'
+      +'.it-s{font-size:10pt;color:#6B6483;font-weight:500}'
+      +'.it-d{font-size:9.5pt;color:#5a5470;margin-top:3px}'
+      +'.hs{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}'
+      +'.hsn{font-size:10pt;font-weight:600}'
+      +'.dots{display:flex;gap:3px}'
+      +'.dot{width:9px;height:9px;border-radius:50%;background:#e7e2f5}'
+      +'.dot.on{background:#5B3DEF}'
+      +'.chip{display:inline-block;background:#EEE9FF;color:#4C2FBF;font-size:9pt;font-weight:600;padding:4px 11px;border-radius:20px;margin:0 5px 5px 0}'
+      +'.foot{text-align:center;color:#9A93AE;font-size:8pt;padding:12px;border-top:1px solid #eee}'
+      +'@media print{.no-print{display:none!important}}'
+      +'.no-print{position:fixed;top:14px;right:14px;display:flex;gap:8px}'
+      +'.no-print button{font-family:Inter,sans-serif;border:0;border-radius:9px;padding:10px 16px;font-weight:600;font-size:10pt;cursor:pointer}'
+      +'.b1{background:#4C2FBF;color:#fff}.b2{background:#eee;color:#333}'
+      +'</style></head><body>'
+      +'<div class="no-print"><button class="b1" onclick="window.print()">⬇ Salvar como PDF</button><button class="b2" onclick="window.close()">Fechar</button></div>'
+      +'<div class="pg"><div class="hd"><img class="lg" src="'+logo+'" alt=""><div><h1>'+esc(nome)+'</h1>'
+      +(p.cargo_desejado?'<div class="cargo">'+esc(p.cargo_desejado)+'</div>':'')
+      +(contatos.length?'<div class="ct">'+contatos.map(esc).join('&nbsp;&nbsp;·&nbsp;&nbsp;')+'</div>':'')
+      +'</div></div><div class="bd">'
+      +sec('Resumo', p.resumo?'<p class="resumo">'+esc(p.resumo)+'</p>':'')
+      +sec('Experiência profissional', expH)
+      +sec('Formação acadêmica', eduH)
+      +sec('Certificações', certH)
+      +sec('Competências técnicas', hardH)
+      +sec('Competências comportamentais', softH)
+      +'</div><div class="foot">Currículo gerado por Vezulo · vezulo.com.br</div></div>'
+      +'<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},600);};</scr'+'ipt>'
+      +'</body></html>';
+
+    var w=window.open('','_blank');
+    if(!w){ alertMsg('Permita pop-ups para baixar o PDF.'); return; }
+    w.document.open(); w.document.write(html); w.document.close();
+  }).catch(function(e){ alertMsg('Não foi possível gerar o currículo.'); });
+}
+
 /* ---- Vagas: candidato ---- */
 function hydrateCandidateVagas(){
   var box=document.getElementById('vagasList'); if(!box) return;
@@ -1061,7 +1268,8 @@ function hydrateCompanyVagas(){
   if(fb) fb.innerHTML='<h3 style="margin-bottom:10px">Publicar nova vaga</h3><div class="formgrid">'
     +'<div class="full"><label class="lbl">Título</label><input class="inp2" id="vgTitulo" placeholder="Ex: Desenvolvedor Frontend Sênior"></div>'
     +'<div><label class="lbl">Modalidade</label><select class="inp2" id="vgModal"><option value="remoto">Remoto</option><option value="hibrido">Híbrido</option><option value="presencial">Presencial</option></select></div>'
-    +'<div><label class="lbl">Cidade</label><input class="inp2" id="vgCidade" placeholder="Ex: São Paulo"></div>'
+    +'<div></div>'
+    +locSelectsHTML('vgEstado','vgCidade','','')
     +'<div><label class="lbl">Salário mín (R$)</label><input class="inp2" id="vgSalMin" type="number"></div>'
     +'<div><label class="lbl">Salário máx (R$)</label><input class="inp2" id="vgSalMax" type="number"></div>'
     +'<div class="full"><label class="lbl">Skills desejadas <span class="muted">(separadas por vírgula — melhora o match)</span></label><input class="inp2" id="vgSkills" placeholder="Ex: React, TypeScript, Node"></div>'
@@ -1082,7 +1290,7 @@ function reloadMyVagas(){
 function publicarVaga(){
   var titulo=(val('vgTitulo')||'').trim(); if(!titulo){ alertMsg('Informe o título da vaga.'); return; }
   var skills=(val('vgSkills')||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
-  var body={titulo:titulo,modalidade:val('vgModal'),cidade:val('vgCidade'),salario_min:val('vgSalMin'),salario_max:val('vgSalMax'),descricao:val('vgDesc'),skills:skills,status:'ativa'};
+  var body={titulo:titulo,modalidade:val('vgModal'),estado:val('vgEstado'),cidade:val('vgCidade'),salario_min:val('vgSalMin'),salario_max:val('vgSalMax'),descricao:val('vgDesc'),skills:skills,status:'ativa'};
   api('/vagas',{method:'POST',body:body}).then(function(){ vagaFormToggle(); alertMsg('Vaga publicada! ✓'); reloadMyVagas(); }).catch(function(e){ alertMsg(e.message); });
 }
 function deleteVaga(id){ if(!confirm('Remover esta vaga?')) return; api('/vagas/'+id,{method:'DELETE'}).then(function(){ alertMsg('Vaga removida.'); reloadMyVagas(); }).catch(function(e){ alertMsg(e.message); }); }
@@ -1307,13 +1515,14 @@ function hydrateCandidateProfile(){
   var u=VZ.user||{}; setVal('pEmail', u.email);
   api('/candidate/profile').then(function(p){
     setVal('pNome',p.nome); setVal('pCargo',p.cargo_desejado); setVal('pTel',p.telefone);
-    setVal('pCidade',p.cidade); setVal('pLinkedin',p.linkedin); setVal('pResumo',p.resumo);
+    setVal('pEstado',p.estado||''); locInit('pEstado','pCidade',p.estado,p.cidade);
+    setVal('pLinkedin',p.linkedin); setVal('pResumo',p.resumo);
   }).catch(function(){});
   var btn=document.getElementById('btnSaveProfile');
   if(btn) btn.onclick=function(){
     api('/candidate/profile',{method:'PUT',body:{
       nome:val('pNome'),cargo_desejado:val('pCargo'),telefone:val('pTel'),
-      cidade:val('pCidade'),linkedin:val('pLinkedin'),resumo:val('pResumo')
+      estado:val('pEstado'),cidade:val('pCidade'),linkedin:val('pLinkedin'),resumo:val('pResumo')
     }}).then(function(p){
       var u=VZ.user; if(u){u.nome=val('pNome'); VZ.user=u; document.getElementById('whoName').textContent=u.nome;}
       alertMsg('Perfil salvo! ✓ Completude: '+(p.completude||0)+'%');
@@ -1324,12 +1533,13 @@ function hydrateCompanyProfile(){
   api('/company/profile').then(function(p){
     setVal('cRazao',p.razao_social); setVal('cCnpj',p.cnpj); setVal('cSegmento',p.segmento);
     setVal('cTamanho',p.tamanho); setVal('cWebsite',p.website); setVal('cLinkedin',p.linkedin);
+    setVal('cEstado',p.estado||''); locInit('cEstado','cCidade',p.estado,p.cidade);
   }).catch(function(){});
   var btn=document.getElementById('btnSaveProfile');
   if(btn) btn.onclick=function(){
     api('/company/profile',{method:'PUT',body:{
       razao_social:val('cRazao'),segmento:val('cSegmento'),tamanho:val('cTamanho'),
-      website:val('cWebsite'),linkedin:val('cLinkedin')
+      estado:val('cEstado'),cidade:val('cCidade'),website:val('cWebsite'),linkedin:val('cLinkedin')
     }}).then(function(p){
       var u=VZ.user; if(u){u.nome=val('cRazao'); VZ.user=u; document.getElementById('whoName').textContent=u.nome;}
       alertMsg('Perfil da empresa salvo! ✓');
@@ -1370,11 +1580,12 @@ var PAGES_C={
   +'<div class="formgrid">'
    +fldI('pNome','Nome Completo')+fldI('pCargo','Cargo Desejado')
    +fldIRO('pEmail','Email')+fldI('pTel','Telefone')
-   +fldI('pCidade','Cidade / Estado')+fldI('pLinkedin','LinkedIn')
+   +locSelectsHTML('pEstado','pCidade','','')
+   +fldI('pLinkedin','LinkedIn')
    +'<div class="full"><label class="lbl">Resumo Profissional</label><textarea class="inp2" id="pResumo" placeholder="Conte sua trajetória, especialidades e o que você busca…"></textarea></div>'
   +'</div></div></div>');},
 
- curriculo:function(){return page('Meu Currículo','Visualize como as empresas veem seu perfil.','<button class="btn ghost" onclick="window.print()">⬇ Baixar / Imprimir</button>',
+ curriculo:function(){return page('Meu Currículo','Visualize como as empresas veem seu perfil.','<button class="btn primary" onclick="gerarCurriculoPDF()">⬇ Baixar em PDF</button>',
   '<div id="cvBox"><p class="muted">Carregando…</p></div>');},
 
  experiencias:function(){return page('Experiências','Adicione seu histórico profissional para destacar seu perfil.','<button class="btn dark" id="collAddBtn">+ Adicionar</button>',
@@ -1384,10 +1595,18 @@ var PAGES_C={
   '<div id="collForm" class="card" style="margin-bottom:16px;display:none"><div class="pad" id="collFormBody"></div></div><div id="collList"><p class="muted">Carregando…</p></div>');},
 
  habilidades:function(){return page('Habilidades','Adicione e avalie suas competências técnicas e comportamentais.','<button class="btn primary" id="btnSaveSkills">Salvar habilidades</button>',
-  '<div class="cols">'
-  +'<div class="card"><div class="pad"><h3 style="margin-bottom:6px">Hard Skills</h3><div style="display:flex;gap:8px;margin:10px 0"><input id="hsNome" class="inp2" placeholder="Ex: React"><input id="hsNivel" class="inp2" type="number" min="0" max="100" placeholder="Nível %" style="max-width:120px"><button class="btn ghost" onclick="skillAddHard()">+</button></div><div id="hardList"><p class="muted">Carregando…</p></div></div></div>'
-  +'<div class="card"><div class="pad"><h3 style="margin-bottom:6px">Soft Skills</h3><div style="display:flex;gap:8px;margin:10px 0"><input id="ssNome" class="inp2" placeholder="Ex: Comunicação assertiva"><button class="btn ghost" onclick="skillAddSoft()">+</button></div><div id="softList" class="tags"></div></div></div>'
-  +'</div>');},
+  '<div class="card" style="margin-bottom:18px"><div class="pad">'
+    +'<h3 style="margin-bottom:2px">Hard Skills (técnicas)</h3><p class="muted" style="font-size:12.5px;margin-bottom:12px">Adicione a competência e dê uma nota de 0 a 10 para o seu domínio.</p>'
+    +'<div class="hs-add"><input id="hsNome" class="inp2" placeholder="Ex: React, Excel avançado, Photoshop…" onkeydown="if(event.key===\'Enter\'){event.preventDefault();skillAddHard();}">'
+      +'<select id="hsNivel" class="inp2">'+[0,1,2,3,4,5,6,7,8,9,10].map(function(n){return '<option value="'+n+'"'+(n===7?' selected':'')+'>'+n+'/10</option>';}).join('')+'</select>'
+      +'<button class="btn dark" onclick="skillAddHard()">+ Adicionar</button></div>'
+    +'<div id="hardList" style="margin-top:14px"><p class="muted">Carregando…</p></div>'
+  +'</div></div>'
+  +'<div class="card"><div class="pad">'
+    +'<h3 style="margin-bottom:2px">Soft Skills (comportamentais)</h3><p class="muted" style="font-size:12.5px;margin-bottom:12px">Marque as que combinam com você. Pode adicionar outras no fim.</p>'
+    +'<div id="softGrid" class="soft-grid"></div>'
+    +'<div class="hs-add" style="margin-top:14px"><input id="ssNome" class="inp2" placeholder="Adicionar outra soft skill…" onkeydown="if(event.key===\'Enter\'){event.preventDefault();skillAddSoft();}"><button class="btn ghost" onclick="skillAddSoft()">+ Adicionar</button></div>'
+  +'</div></div>');},
 
  vagas:function(){return page('Vagas Recomendadas','Vagas selecionadas pela nossa IA com base no seu perfil.','',
   '<div id="vagasList" class="grid" style="grid-template-columns:repeat(auto-fill,minmax(320px,1fr))"><p class="muted">Carregando…</p></div>');},
@@ -1469,6 +1688,7 @@ var PAGES_E={
   +'<div class="formgrid" style="margin-top:18px">'
    +fldI('cRazao','Razão Social')+fldIRO('cCnpj','CNPJ')
    +fldI('cSegmento','Segmento')+fldI('cTamanho','Tamanho da Empresa')
+   +locSelectsHTML('cEstado','cCidade','','')
    +fldI('cWebsite','Website')+fldI('cLinkedin','LinkedIn')
   +'</div></div></div>');},
 
