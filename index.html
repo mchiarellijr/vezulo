@@ -218,6 +218,65 @@
   .step .g{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--green)}
   .step small{color:var(--muted);font-size:11px;display:block}
 
+  /* ===== Redesign — componentes do painel ===== */
+  .card-h{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+  .card-h h3{font-size:16px;color:var(--navy)}
+  .card-h .more{margin-left:auto;color:var(--blue-2);font-weight:600;font-size:12.5px;cursor:pointer}
+  .chip{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:12px;padding:5px 11px;border-radius:999px;background:#F0ECFF;color:var(--blue-2)}
+  .chip.mint{background:rgba(34,197,139,.14);color:var(--green-2)}
+  .chip.gold{background:rgba(224,162,60,.16);color:var(--gold-deep,#D98E2B)}
+  .chip.soft{background:#F2EEFB;color:var(--muted)}
+  /* KPI redesign */
+  .kpi{position:relative;overflow:hidden}
+  .kpi .val{font-family:'Sora','Inter',sans-serif;font-weight:800;font-size:28px;color:var(--navy);line-height:1;letter-spacing:-.5px}
+  .kpi .delta{position:absolute;top:16px;right:16px;font-weight:700;font-size:12px;display:flex;align-items:center;gap:3px;margin:0}
+  .kpi.feat{background:var(--navy);border:none;color:#fff}
+  .kpi.feat .val{color:#fff}.kpi.feat .lab{color:#B9AEDC}
+  .ico.v-indigo{background:rgba(76,47,191,.12);color:var(--blue)}
+  .ico.v-violet{background:rgba(91,61,239,.14);color:var(--blue-2)}
+  .ico.v-mint{background:rgba(34,197,139,.16);color:var(--green-2)}
+  .ico.v-gold{background:rgba(224,162,60,.18);color:#D98E2B}
+  .ico.v-lilac{background:rgba(157,123,255,.18);color:#7a53f0}
+  /* availability bar */
+  .avail-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:linear-gradient(120deg,#fff,#FBFAFF);border:1px solid var(--line);border-radius:var(--radius);padding:14px 18px;box-shadow:var(--shadow-sm);margin-bottom:18px}
+  /* match redesign */
+  .rc{border:1px solid var(--line);border-radius:var(--radius);padding:16px;transition:.18s;background:#fff}
+  .rc:hover{border-color:var(--blue-3);box-shadow:var(--shadow-md)}
+  .rc-top{display:flex;align-items:center;gap:14px}
+  .rc-logo{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:15px;font-family:'Sora','Inter',sans-serif;flex:0 0 auto;background:var(--grad)}
+  .rc-title{font-family:'Sora','Inter',sans-serif;font-weight:700;font-size:15px;color:var(--navy)}
+  .rc-sub{color:var(--muted);font-size:12.5px;margin-top:2px}
+  .rc-score{margin-left:auto;text-align:center;flex:0 0 auto}
+  .rc-score b{font-family:'Sora','Inter',sans-serif;font-weight:800;font-size:22px;color:var(--green-2);line-height:1}
+  .rc-score small{display:block;font-weight:700;font-size:9px;letter-spacing:.14em;color:var(--green-2);text-transform:uppercase}
+  .rc-break{margin-top:14px;padding-top:14px;border-top:1px dashed var(--line-2);display:none;grid-template-columns:1fr 1fr;gap:10px 22px}
+  .rc.open .rc-break{display:grid}
+  .dimbar .row{display:flex;justify-content:space-between;font-weight:600;font-size:12px;color:var(--ink);margin-bottom:5px}
+  .dimbar .track{height:7px;border-radius:99px;background:#EFEBFC;overflow:hidden}
+  .dimbar .fill{height:100%;border-radius:99px;background:var(--grad)}
+  .dimbar .fill.mint{background:var(--grad-mint)}
+  .rc-explain{font-weight:600;font-size:12.5px;color:var(--blue-2);background:none;border:none;display:inline-flex;align-items:center;gap:5px;padding:0;margin-top:14px;cursor:pointer}
+  .rc-explain svg{width:14px;height:14px;transition:.2s}
+  .rc.open .rc-explain svg{transform:rotate(180deg)}
+  .rc-cta{display:flex;gap:8px;margin-top:14px;align-items:center}
+  /* stepitem + ach (light, prototype) */
+  .stepitem{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+  .stepitem:last-child{border:none}
+  .stepitem .si-ic{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;flex:0 0 auto}
+  .stepitem b{font-family:'Sora','Inter',sans-serif;font-weight:700;font-size:13.5px;color:var(--navy);display:block}
+  .stepitem .plus{font-family:'Sora','Inter',sans-serif;font-weight:800;font-size:13px;color:var(--green-2);background:rgba(34,197,139,.14);padding:4px 9px;border-radius:8px;margin-left:auto}
+  .achx{display:flex;gap:12px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:14px;background:linear-gradient(120deg,#fff,#FBFAFF);margin-bottom:10px}
+  .achx .medal{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:20px;flex:0 0 auto}
+  .achx b{font-family:'Sora','Inter',sans-serif;font-weight:700;font-size:13.5px;color:var(--navy);display:block}
+  .achx span{font-size:12px;color:var(--muted)}
+  /* ring redesign (SVG) */
+  .ring-wrap{display:flex;align-items:center;gap:18px}
+  .ring-svg{position:relative;width:120px;height:120px;flex:0 0 auto}
+  .ring-svg .pct{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
+  .ring-svg .pct b{font-family:'Sora','Inter',sans-serif;font-weight:800;font-size:26px;color:var(--navy);display:block;line-height:1}
+  .ring-svg .pct span{font-weight:600;font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
+  .spark{width:100%;height:80px;display:block}
+
   .funnel{display:flex;gap:8px;margin-top:6px}
   .fstep{flex:1;text-align:center;padding:14px 6px;border-radius:12px;color:#fff}
   .fstep b{font-size:22px;display:block} .fstep span{font-size:11px;opacity:.9} .fstep small{font-size:10px;opacity:.75;display:block;margin-top:3px}
@@ -1527,30 +1586,48 @@ var MES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'
 function mesShort(ym){var p=(ym||'').split('-');return p[1]?MES[parseInt(p[1],10)-1]:ym;}
 function feedLabel(t){var m={vaga_view:'Vaga visualizada',vaga_apply:'Nova candidatura',unlock:'Perfil desbloqueado',interest:'Interesse registrado',profile_view:'Perfil visualizado',match_generated:'Match gerado',purchase:'Vezus adquiridos'};return m[t]||t;}
 
+function ringSet(pct){ var a=document.getElementById('ringArc'); if(a){ var p=Math.max(0,Math.min(100,pct||0)); a.setAttribute('stroke-dashoffset', 314*(1-p/100)); } }
+var STEP_ICONS={teste_skills:['v-mint','✓'],experiencia:['v-indigo','▤'],hard_skills:['v-violet','◈'],portfolio:['v-lilac','🔗']};
+function stepItem(s){ var ic=STEP_ICONS[s.chave]||['v-lilac','＋'];
+  return '<div class="stepitem"><div class="si-ic '+ic[0]+'">'+ic[1]+'</div><div><b>'+esc(s.label)+'</b><div class="muted" style="font-size:12px">recomendado para o seu perfil</div></div><span class="plus">+'+(s.ganho||0)+'%</span></div>'; }
+function achItem(a,dim){ var med=(/completo/i.test(a.chave||'')?'🎖️':(/alta|em_alta/i.test(a.chave||'')?'🔥':'🏆'));
+  var bg=(med==='🔥'?'rgba(91,61,239,.14)':(med==='🎖️'?'#F2EEFB':'rgba(224,162,60,.16)'));
+  return '<div class="achx"'+(dim?' style="opacity:.6"':'')+'><div class="medal" style="background:'+bg+'">'+med+'</div><div><b>'+esc(a.titulo||'')+'</b><span>'+esc(a.desc||'')+'</span></div></div>'; }
+var RC_GRADS=['linear-gradient(135deg,#4C2FBF,#9D7BFF)','linear-gradient(135deg,#5B3DEF,#22C58B)','linear-gradient(135deg,#9D7BFF,#4C2FBF)'];
+function recCard(v,i){
+  var b=v.match_breakdown||{};
+  var dims=[['Hard skills',b.skills||0,1],['Senioridade',b.senioridade||0,0],['Localização',b.local||0,1],['Salário',b.salario||0,0]];
+  var sub=[v.empresa,v.cidade,v.modalidade,(v.salario_combinar?'A combinar':(v.salario_min?'R$ '+v.salario_min+(v.salario_max?'–'+v.salario_max:''):''))].filter(Boolean).join(' · ');
+  var av=esc((v.titulo||'V').substring(0,2).toUpperCase());
+  var m=v.match||0;
+  var dimH=dims.map(function(d){ var mint=(d[1]>=90); return '<div class="dimbar"><div class="row"><span>'+d[0]+'</span><span>'+d[1]+'%</span></div><div class="track"><div class="fill'+(mint?' mint':'')+'" style="width:'+d[1]+'%"></div></div></div>'; }).join('');
+  return '<div class="rc'+(i===0?' open':'')+'" style="margin-bottom:12px">'
+    +'<div class="rc-top"><div class="rc-logo" style="background:'+RC_GRADS[i%3]+'">'+av+'</div>'
+      +'<div><div class="rc-title">'+esc(v.titulo||'Vaga')+'</div><div class="rc-sub">'+esc(sub)+'</div></div>'
+      +'<div class="rc-score"><b>'+m+'%</b><small>match</small></div></div>'
+    +'<button class="rc-explain" onclick="this.closest(\'.rc\').classList.toggle(\'open\')">Por que '+m+'%? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></button>'
+    +'<div class="rc-break">'+dimH+'</div>'
+    +'<div class="rc-cta"><button class="btn primary sm" onclick="candidatar('+v.id+',this)">Candidatar-se</button></div></div>';
+}
 function hydrateCandidateDashboard(){
   api('/candidate/metrics').then(function(m){
     setTxt('kcViews', m.visualizacoes||0);
     setTxt('kcInteressadas', m.empresas_interessadas||0);
     setTxt('kcMatches', m.matches_realizados||0);
-    setTxt('kcPerfil', (m.perfil_completo||0)+'%');
-    var ring=document.getElementById('ringPerfil'); if(ring) ring.style.setProperty('--p', m.perfil_completo||0);
-    setTxt('ringPerfilNum', (m.perfil_completo||0)+'%');
+    var pc=m.perfil_completo||0;
+    setTxt('kcPerfil', pc+'%');
+    ringSet(pc); setTxt('ringPerfilNum', pc+'%');
+    var vd=document.getElementById('kcViewsD'); if(vd){ var ev=m.evolucao||[]; var sum=ev.reduce(function(a,d){return a+(d.valor||0);},0); vd.innerHTML=sum>0?('▲ '+sum+' na semana'):''; }
     if(m.evolucao) drawLine(m.evolucao.map(function(d){return d.valor;}));
     var ab=document.getElementById('achBox');
-    if(ab) ab.innerHTML=(m.conquistas&&m.conquistas.length)?m.conquistas.map(achCard).join(''):'<p class="muted">Complete seu perfil para desbloquear conquistas.</p>';
+    if(ab) ab.innerHTML=(m.conquistas&&m.conquistas.length)?m.conquistas.map(function(a){return achItem(a,false);}).join(''):'<p class="muted" style="font-size:13px">Complete seu perfil para desbloquear conquistas.</p>';
     var sb=document.getElementById('stepsBox');
-    if(sb) sb.innerHTML=(m.proximos_passos&&m.proximos_passos.length)?m.proximos_passos.map(function(s,i){return stepRow(i+1,s.label,'',s.ganho);}).join(''):'<div class="step"><div class="dot done">✓</div><div><b style="font-size:13px">Perfil completo! 🎉</b></div></div>';
+    if(sb) sb.innerHTML=(m.proximos_passos&&m.proximos_passos.length)?m.proximos_passos.map(stepItem).join(''):'<div class="stepitem"><div class="si-ic v-mint">✓</div><div><b>Perfil completo! 🎉</b><div class="muted" style="font-size:12px">todas as seções preenchidas</div></div></div>';
   }).catch(function(){});
   api('/candidate/recomendadas').then(function(list){
     var box=document.getElementById('recBox'); if(!box) return;
-    if(!list||!list.length){ box.innerHTML='<p class="muted" style="padding:8px 0">Ainda não há vagas recomendadas. Quando empresas publicarem vagas compatíveis com seu perfil, elas aparecem aqui com o match explicável.</p>'; return; }
-    box.innerHTML=list.slice(0,3).map(function(v){
-      var b=v.match_breakdown||{};
-      var dims=[['Hard skills',b.skills||0],['Senioridade',b.senioridade||0],['Localização',b.local||0],['Salário',b.salario||0]];
-      var sub=[v.empresa,v.modalidade,(v.salario_combinar?'A combinar':'')].filter(Boolean).join(' · ');
-      var av=(v.titulo||'V').substring(0,2).toUpperCase();
-      return matchC(av,v.titulo||'Vaga',sub,String(v.match||0),(v.skills||[]).map(function(s){return s.nome;}),dims,'Candidatar-se');
-    }).join('');
+    if(!list||!list.length){ box.innerHTML='<p class="muted" style="padding:8px 0;font-size:13px">Ainda não há vagas recomendadas. Quando empresas publicarem vagas compatíveis com seu perfil, elas aparecem aqui com o match explicável.</p>'; return; }
+    box.innerHTML=list.slice(0,3).map(recCard).join('');
   }).catch(function(){});
 }
 function hydrateCompanyDashboard(){
@@ -1612,22 +1689,29 @@ function whyBlock(dims){var h='<button class="whylink" onclick="toggleWhy(this)"
 
 var PAGES_C={
  dashboard:function(){var nome=(((VZ.user&&VZ.user.nome)||'').split(' ')[0])||'';return '<div class="wrap">'
-  +'<div class="page-h"><div><h1 id="dashHello">Bem-vindo'+(nome?', '+nome:'')+'! 👋</h1><p>Acompanhe seu perfil e suas oportunidades.</p></div>'
-  +'<div style="display:flex;gap:10px"><button class="btn ghost" onclick="obInit()">✦ Completar cadastro</button><button class="btn dark" onclick="navTo(\'vagas\')">Ver Vagas Recomendadas</button></div></div>'
+  +'<div class="page-h"><div><h1 id="dashHello">Olá, '+(nome||'candidato')+' 👋</h1><p>Acompanhe seu perfil e suas oportunidades.</p></div>'
+  +'<div style="display:flex;gap:10px"><button class="btn ghost" onclick="obInit()">✦ Completar cadastro</button><button class="btn dark" onclick="navTo(\'vagas\')">Ver vagas recomendadas</button></div></div>'
+  +'<div class="avail-bar"><span class="chip mint">● Disponível para propostas</span>'
+    +'<span class="muted" style="font-size:13px">As empresas veem seu status — perfis ativos valem mais no match.</span></div>'
   +'<div class="grid kpis">'
-   +kpi('i-blue','◎','—','Visualizações','','kcViews')
-   +kpi('i-purple','▣','—','Empresas interessadas','','kcInteressadas')
-   +kpi('i-pink','◈','—','Matches realizados',['','≥ 80% de compatibilidade'],'kcMatches')
-   +kpi('i-green','▲','—','Perfil completo','','kcPerfil')
+   +'<div class="card kpi"><span class="delta up" id="kcViewsD"></span><div class="ico v-violet">◎</div><div class="val" id="kcViews">—</div><div class="lab">Visualizações do perfil</div></div>'
+   +'<div class="card kpi"><div class="ico v-indigo">▣</div><div class="val" id="kcInteressadas">—</div><div class="lab">Empresas interessadas</div></div>'
+   +'<div class="card kpi"><div class="ico v-mint">✓</div><div class="val" id="kcMatches">—</div><div class="lab">Matches realizados</div></div>'
+   +'<div class="card kpi feat"><div class="ico v-lilac" style="background:rgba(157,123,255,.25)">✦</div><div class="val" id="kcPerfil">—</div><div class="lab">Perfil completo</div></div>'
   +'</div>'
-  +'<div class="cols" style="margin-top:16px"><div class="stack">'
-   +'<div class="card"><div class="pad"><div class="sec-h"><h3>Evolução do Perfil</h3><span class="muted">Visualizações · últimos 7 dias</span></div><div id="lineChart"></div></div></div>'
-   +'<div class="card"><div class="pad"><div class="sec-h"><h3>Suas melhores recomendações</h3><span class="muted">Match IA explicável</span></div><div id="recBox"><p class="muted">Carregando…</p></div></div></div>'
-  +'</div><div class="stack">'
-   +'<div class="card"><div class="pad"><h3 style="margin-bottom:14px">Perfil Completo</h3><div class="ring-wrap"><div class="ring" id="ringPerfil" style="--p:0"><div class="hole"><b id="ringPerfilNum">—</b><span>completo</span></div></div><div class="muted">Perfis 100% completos recebem <b style="color:var(--ink)">3× mais</b> visualizações.</div></div></div></div>'
-   +'<div class="card"><div class="pad"><h3 style="margin-bottom:12px">Conquistas</h3><div id="achBox"><p class="muted">—</p></div></div></div>'
-   +'<div class="card"><div class="pad"><h3 style="margin-bottom:6px">Próximos Passos</h3><p class="muted" style="margin-bottom:6px">Ordenado pelo ganho de completude</p><div id="stepsBox"><p class="muted">—</p></div></div></div>'
-  +'</div></div></div>';},
+  +'<div class="grid" style="grid-template-columns:1.5fr 1fr;align-items:start;gap:18px;margin-top:18px">'
+   +'<div class="grid" style="gap:18px">'
+    +'<div class="card"><div class="pad"><div class="card-h"><h3>Evolução do perfil</h3><span class="chip mint" style="margin-left:auto">últimos 7 dias</span></div><div id="lineChart"></div></div></div>'
+    +'<div class="card"><div class="pad"><div class="card-h"><h3>Vagas recomendadas</h3><span class="more" onclick="navTo(\'vagas\')">Ver todas</span></div><div id="recBox"><p class="muted">Carregando…</p></div></div></div>'
+   +'</div>'
+   +'<div class="grid" style="gap:18px">'
+    +'<div class="card"><div class="pad"><div class="card-h"><h3>Perfil completo</h3></div><div class="ring-wrap">'
+      +'<div class="ring-svg"><svg width="120" height="120" viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" fill="none" stroke="#EFEBFC" stroke-width="12"/><circle id="ringArc" cx="60" cy="60" r="50" fill="none" stroke="url(#ringGrad)" stroke-width="12" stroke-linecap="round" stroke-dasharray="314" stroke-dashoffset="314" transform="rotate(-90 60 60)"/><defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4C2FBF"/><stop offset="1" stop-color="#9D7BFF"/></linearGradient></defs></svg><div class="pct"><b id="ringPerfilNum">—</b><span>completo</span></div></div>'
+      +'<div class="muted" style="font-size:13px">Perfis 100% completos recebem <b style="color:var(--ink)">3× mais</b> visualizações.</div></div></div></div>'
+    +'<div class="card"><div class="pad"><div class="card-h"><h3>Próximos passos</h3></div><div id="stepsBox"><p class="muted">—</p></div></div></div>'
+    +'<div class="card"><div class="pad"><div class="card-h"><h3>Conquistas</h3></div><div id="achBox"><p class="muted">—</p></div></div></div>'
+   +'</div>'
+  +'</div></div>';},
 
  perfil:function(){return page('Meu Perfil','Gerencie suas informações pessoais e profissionais.','<button class="btn primary" id="btnSaveProfile">Salvar Alterações</button>',
   '<div class="card"><div class="pad">'
