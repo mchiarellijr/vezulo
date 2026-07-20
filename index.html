@@ -413,6 +413,31 @@
   .app-footer a:hover{color:var(--blue-2)}
   .app-footer .fbottom{max-width:1100px;margin-top:24px;padding-top:16px;border-top:1px solid var(--line);font-size:12px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
   @media(max-width:700px){.app-footer .cols{gap:24px 40px}}
+  /* ---- Pagamento (Mercado Pago) ---- */
+  .pay-head{padding:22px 24px 0}
+  .pay-head h3{font-family:'Sora','Inter',sans-serif;font-size:19px;margin:0}
+  .pay-head .muted{margin-top:4px}
+  .pay-sum{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:16px 24px 0;padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:var(--bg-soft,#f7f7fb)}
+  .pay-sum .pv{font-family:'Sora','Inter',sans-serif;font-weight:800;font-size:15px}
+  .pay-sum .pp{font-family:'Sora','Inter',sans-serif;font-weight:800;font-size:20px;color:var(--ink)}
+  .pay-tabs{display:flex;gap:8px;margin:18px 24px 0}
+  .pay-tabs button{flex:1;padding:11px;border:1px solid var(--line);background:#fff;border-radius:12px;font-weight:700;font-size:13.5px;cursor:pointer;color:var(--muted);font-family:inherit}
+  .pay-tabs button.on{border-color:transparent;background:var(--grad);color:#fff;box-shadow:var(--shadow-sm)}
+  .pay-body{padding:18px 24px 24px}
+  .pix-qr{display:block;width:210px;height:210px;margin:6px auto 14px;border-radius:12px;border:1px solid var(--line)}
+  .pix-code{display:flex;gap:8px;margin-top:8px}
+  .pix-code input{flex:1;font-size:12px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fafaff;font-family:monospace}
+  .pay-field{margin-bottom:12px}
+  .pay-field label{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:5px}
+  .pay-field input,.pay-field select{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;font-family:inherit;background:#fff}
+  .pay-field .mpfield{height:44px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:#fff}
+  .pay-row{display:flex;gap:10px}
+  .pay-row .pay-field{flex:1}
+  .pay-status{display:flex;align-items:center;gap:9px;justify-content:center;padding:10px;font-size:13px;color:var(--muted)}
+  .pay-spin{width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--blue-2,#5B3DEF);border-radius:50%;animation:paysp .7s linear infinite}
+  @keyframes paysp{to{transform:rotate(360deg)}}
+  .pay-ok{text-align:center;padding:20px 0}
+  .pay-ok .ic{width:60px;height:60px;border-radius:50%;background:var(--grad-mint,linear-gradient(135deg,#22C58B,#8ee6bf));color:#fff;display:grid;place-items:center;font-size:30px;margin:0 auto 12px}
 </style>
 </head>
 <body>
@@ -1456,12 +1481,144 @@ function reloadLedger(){
   }).catch(function(){});
 }
 function ledgerLabel(reason){var m={purchase:'Compra de pacote',unlock:'Desbloqueio de perfil',welcome:'Bônus de boas-vindas',refund:'Estorno',message:'Mensagem'};return m[reason]||reason;}
-function comprarPacote(id,btn){ if(btn){btn.disabled=true;btn.textContent='…';}
-  api('/vezus/purchase',{method:'POST',body:{pacote:id}}).then(function(d){
-    alertMsg('Pacote adicionado! Saldo: '+d.saldo+' Vezus'); setTxt('finSaldo', d.saldo);
-    var pill=document.getElementById('vezusPill'); if(pill) pill.innerHTML='<span class="v">V</span> <b>'+d.saldo+'</b>';
-    reloadLedger();
-  }).catch(function(e){ alertMsg(e.message); }).finally(function(){ if(btn){btn.disabled=false;btn.textContent='Comprar';} });
+/* ---- Pagamento real via Mercado Pago (Checkout Transparente) ---- */
+var MP_STATE={mp:null,pubkey:null,pkg:null,cardForm:null,poll:null};
+
+function comprarPacote(id,btn){
+  var lbl=btn?btn.textContent:''; if(btn){btn.disabled=true;btn.textContent='…';}
+  api('/pay/config').then(function(cfg){
+    if(!cfg||!cfg.configured){ throw new Error('Pagamento indisponível no momento. Tente novamente em instantes.'); }
+    var pkg=(cfg.packages||[]).filter(function(p){return String(p.id)===String(id);})[0];
+    if(!pkg){ throw new Error('Pacote não encontrado.'); }
+    MP_STATE.pubkey=cfg.public_key; MP_STATE.pkg=pkg;
+    openPayModal(pkg);
+  }).catch(function(e){ alertMsg(e.message); }).finally(function(){ if(btn){btn.disabled=false;btn.textContent=lbl||'Comprar';} });
+}
+
+function openPayModal(pkg){
+  clearPoll();
+  var preco='R$ '+Number(pkg.preco).toFixed(2).replace('.',',');
+  var html=''
+    +'<div class="pay-head"><h3>Comprar Vezus</h3><p class="muted">Pagamento seguro via Mercado Pago</p></div>'
+    +'<div class="pay-sum"><div><div class="pv">'+pkg.vezus+' Vezus</div><div class="muted" style="font-size:12px">'+esc(pkg.nome)+'</div></div><div class="pp">'+preco+'</div></div>'
+    +'<div class="pay-tabs"><button id="ptPix" class="on" onclick="payTab(\'pix\')">Pix</button><button id="ptCard" onclick="payTab(\'card\')">Cartão</button></div>'
+    +'<div class="pay-body" id="payBody"></div>';
+  openModal(html);
+  payTab('pix');
+}
+
+function payTab(which){
+  clearPoll();
+  var a=document.getElementById('ptPix'), b=document.getElementById('ptCard');
+  if(a) a.classList.toggle('on', which==='pix');
+  if(b) b.classList.toggle('on', which==='card');
+  if(which==='pix') payPixStart(); else payCardStart();
+}
+
+function payPixStart(){
+  var body=document.getElementById('payBody'); if(!body) return;
+  body.innerHTML='<div class="pay-status"><span class="pay-spin"></span> Gerando cobrança Pix…</div>';
+  api('/pay/pix',{method:'POST',body:{pacote:MP_STATE.pkg.id}}).then(function(d){
+    if(!document.getElementById('payBody')) return;
+    var img=d.qr_code_base64?('<img class="pix-qr" src="data:image/png;base64,'+d.qr_code_base64+'" alt="QR Code Pix">'):'';
+    body.innerHTML=img
+      +'<p class="muted" style="text-align:center;font-size:12.5px">Escaneie o QR Code no app do seu banco ou copie o código abaixo.</p>'
+      +'<div class="pix-code"><input id="pixCode" readonly value="'+esc(d.qr_code||'')+'"><button class="btn ghost sm" onclick="copyPix(this)">Copiar</button></div>'
+      +'<div class="pay-status" id="pixWait"><span class="pay-spin"></span> Aguardando pagamento…</div>';
+    startPoll(d.payment_id);
+  }).catch(function(e){ if(body) body.innerHTML='<p class="muted" style="text-align:center">'+esc(e.message)+'</p>'; });
+}
+
+function copyPix(btn){
+  var i=document.getElementById('pixCode'); if(!i) return; i.select();
+  try{ navigator.clipboard.writeText(i.value); }catch(e){ try{document.execCommand('copy');}catch(_){} }
+  if(btn){ btn.textContent='Copiado!'; setTimeout(function(){btn.textContent='Copiar';},1500); }
+}
+
+function startPoll(pid){
+  clearPoll();
+  MP_STATE.poll=setInterval(function(){
+    api('/pay/status?id='+encodeURIComponent(pid)).then(function(s){
+      if(s.status==='approved'){ clearPoll(); paySuccess(s.saldo); }
+      else if(s.status==='rejected'||s.status==='cancelled'){ clearPoll(); var w=document.getElementById('pixWait'); if(w) w.innerHTML='Cobrança expirada ou cancelada. Feche e tente de novo.'; }
+    }).catch(function(){});
+  },4000);
+}
+function clearPoll(){ if(MP_STATE.poll){ clearInterval(MP_STATE.poll); MP_STATE.poll=null; } }
+
+function payCardStart(){
+  var body=document.getElementById('payBody'); if(!body) return;
+  if(typeof MercadoPago==='undefined'){ body.innerHTML='<div class="pay-status"><span class="pay-spin"></span> Carregando módulo de pagamento…</div>'; setTimeout(function(){ if(document.getElementById('ptCard')&&document.getElementById('ptCard').classList.contains('on')) payCardStart(); },600); return; }
+  var email=(VZ.user&&VZ.user.email)||'';
+  var preco='R$ '+Number(MP_STATE.pkg.preco).toFixed(2).replace('.',',');
+  body.innerHTML=''
+    +'<form id="form-checkout">'
+    +'<div class="pay-field"><label>Número do cartão</label><div class="mpfield" id="form-checkout__cardNumber"></div></div>'
+    +'<div class="pay-row"><div class="pay-field"><label>Vencimento</label><div class="mpfield" id="form-checkout__expirationDate"></div></div>'
+    +'<div class="pay-field"><label>CVV</label><div class="mpfield" id="form-checkout__securityCode"></div></div></div>'
+    +'<div class="pay-field"><label>Nome impresso no cartão</label><input type="text" id="form-checkout__cardholderName" placeholder="Igual ao cartão"></div>'
+    +'<div class="pay-field"><label>E-mail</label><input type="email" id="form-checkout__cardholderEmail" value="'+esc(email)+'"></div>'
+    +'<div class="pay-row"><div class="pay-field" style="max-width:120px"><label>Documento</label><select id="form-checkout__identificationType"></select></div>'
+    +'<div class="pay-field"><label>Número do documento</label><input type="text" id="form-checkout__identificationNumber" placeholder="CPF"></div></div>'
+    +'<div class="pay-field"><label>Banco emissor</label><select id="form-checkout__issuer"></select></div>'
+    +'<div class="pay-field"><label>Parcelas</label><select id="form-checkout__installments"></select></div>'
+    +'<button type="submit" class="btn primary block" id="form-checkout__submit">Pagar '+preco+'</button>'
+    +'<div class="pay-status" id="cardStatus" style="display:none;margin-top:10px"><span class="pay-spin"></span> Processando…</div>'
+    +'</form>';
+  try{ MP_STATE.mp=MP_STATE.mp||new MercadoPago(MP_STATE.pubkey,{locale:'pt-BR'}); }
+  catch(e){ body.innerHTML='<p class="muted" style="text-align:center">Não foi possível iniciar o pagamento por cartão.</p>'; return; }
+  mountCardForm();
+}
+
+function mountCardForm(){
+  var pkg=MP_STATE.pkg;
+  MP_STATE.cardForm=MP_STATE.mp.cardForm({
+    amount:String(pkg.preco),
+    iframe:true,
+    form:{
+      id:'form-checkout',
+      cardNumber:{id:'form-checkout__cardNumber',placeholder:'0000 0000 0000 0000'},
+      expirationDate:{id:'form-checkout__expirationDate',placeholder:'MM/AA'},
+      securityCode:{id:'form-checkout__securityCode',placeholder:'CVV'},
+      cardholderName:{id:'form-checkout__cardholderName'},
+      issuer:{id:'form-checkout__issuer'},
+      installments:{id:'form-checkout__installments'},
+      identificationType:{id:'form-checkout__identificationType'},
+      identificationNumber:{id:'form-checkout__identificationNumber'},
+      cardholderEmail:{id:'form-checkout__cardholderEmail'}
+    },
+    callbacks:{
+      onFormMounted:function(err){},
+      onSubmit:function(ev){ ev.preventDefault(); payCardSubmit(); },
+      onError:function(err){}
+    }
+  });
+}
+
+function payCardSubmit(){
+  var cf=MP_STATE.cardForm; if(!cf) return;
+  var d=cf.getCardFormData();
+  if(!d||!d.token){ alertMsg('Confira os dados do cartão.'); return; }
+  var st=document.getElementById('cardStatus'); if(st){ st.style.display='flex'; st.style.color=''; st.innerHTML='<span class="pay-spin"></span> Processando…'; }
+  var sub=document.getElementById('form-checkout__submit'); if(sub) sub.disabled=true;
+  api('/pay/card',{method:'POST',body:{
+    pacote:MP_STATE.pkg.id, token:d.token, installments:d.installments,
+    payment_method_id:d.paymentMethodId, issuer_id:d.issuerId, email:d.cardholderEmail
+  }}).then(function(r){
+    if(r.status==='approved'){ paySuccess(r.saldo); }
+    else if(r.status==='in_process'||r.status==='pending'){ if(st){ st.style.color=''; st.innerHTML='Pagamento em análise. Os Vezus entram assim que for aprovado.'; } }
+    else { if(st){ st.style.color='var(--red)'; st.textContent='Pagamento recusado. Tente outro cartão ou use Pix.'; } if(sub) sub.disabled=false; }
+  }).catch(function(e){ if(st){ st.style.color='var(--red)'; st.textContent=e.message; } if(sub) sub.disabled=false; });
+}
+
+function paySuccess(saldo){
+  clearPoll();
+  var body=document.getElementById('payBody');
+  if(body) body.innerHTML='<div class="pay-ok"><div class="ic">✓</div><p style="font-weight:700;font-family:Sora,Inter,sans-serif;margin:0">Pagamento aprovado!</p><p class="muted" style="font-size:13px;margin-top:4px">Seus Vezus já estão na sua conta.</p></div>';
+  function apply(s){ setTxt('finSaldo', s); var pill=document.getElementById('vezusPill'); if(pill) pill.innerHTML='<span class="v">V</span> <b>'+s+'</b>'; }
+  if(saldo!=null){ apply(saldo); } else { api('/vezus/balance').then(function(b){ apply(b.saldo); }).catch(function(){}); }
+  reloadLedger();
+  setTimeout(function(){ var back=document.getElementById('modalBack'); if(back) back.classList.remove('show'); },2400);
 }
 
 /* ---- Buscar Talentos + desbloqueio (empresa) ---- */
@@ -1527,7 +1684,7 @@ function msgUser(id){ closeModal(); navTo('mensagens'); setTimeout(function(){ o
 
 /* ---- Modal de perfil do talento ---- */
 function openModal(html){ var b=document.getElementById('modalBody'); if(b) b.innerHTML=html; var back=document.getElementById('modalBack'); if(back) back.classList.add('show'); }
-function closeModal(e){ if(e&&e.target&&e.target.id!=='modalBack') return; var back=document.getElementById('modalBack'); if(back) back.classList.remove('show'); }
+function closeModal(e){ if(e&&e.target&&e.target.id!=='modalBack') return; if(typeof clearPoll==='function') clearPoll(); var back=document.getElementById('modalBack'); if(back) back.classList.remove('show'); }
 function openTalento(id){
   openModal('<div class="pad"><p class="muted">Carregando…</p></div>');
   api('/company/talento/'+id).then(function(t){
@@ -2113,5 +2270,6 @@ vzBoot();
   window.addEventListener('appinstalled', function(){ try{ localStorage.setItem(KEY, String(Date.now())); }catch(e){} });
 })();
 </script>
+<script src="https://sdk.mercadopago.com/js/v2"></script>
 </body>
 </html>
