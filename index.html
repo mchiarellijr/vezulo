@@ -1684,6 +1684,11 @@ function hydrateCompanyDashboard(){
     var fb=document.getElementById('feedBox');
     if(fb) fb.innerHTML=(m.feed&&m.feed.length)?m.feed.map(function(f){return feed('i-blue','◔',feedLabel(f.type),(f.created_at||''));}).join(''):'<p class="muted">Sem atividades ainda. Publique vagas e busque talentos para começar.</p>';
   }).catch(function(){});
+  var dt=document.getElementById('dashTalents');
+  if(dt) api('/company/talentos').then(function(list){
+    if(!list||!list.length){ dt.innerHTML='<p class="muted" style="grid-column:1/-1;font-size:13px">Nenhum talento ainda. Assim que houver candidatos compatíveis, eles aparecem aqui.</p>'; return; }
+    dt.innerHTML=list.slice(0,2).map(renderTalent).join('');
+  }).catch(function(){ dt.innerHTML=''; });
 }
 function hydrateCandidateProfile(){
   var u=VZ.user||{}; setVal('pEmail', u.email);
@@ -1826,9 +1831,8 @@ var PAGES_E={
    +'<div class="card"><div class="pad"><div class="sec-h"><h3>Funil da vaga · Desenvolvedor Frontend Sênior</h3><span class="statuspill st-ativa">Ativa</span></div>'
      +'<div class="funnel"><div class="fstep" style="background:#9D7BFF"><b>342</b><span>Views</span></div><div class="fstep" style="background:#5B3DEF"><b>45</b><span>Interessados</span></div><div class="fstep" style="background:#4C2FBF"><b>28</b><span>Candidaturas</span></div><div class="fstep" style="background:#22C58B"><b>12</b><span>Matches</span><small>≥ 80%</small></div><div class="fstep" style="background:#178a5f"><b>2</b><span>Contratações</span></div></div>'
      +'<p class="muted" style="margin-top:12px">Conversão view→candidatura <b style="color:var(--ink)">8,2%</b> · candidatura→contratação <b style="color:var(--ink)">7,1%</b></p></div></div>'
-   +'<div class="card"><div class="pad"><div class="sec-h"><h3>Buscar Talentos — Match Inteligente</h3><span class="muted">Ordenado por compatibilidade</span></div>'
-     +talentCard('CS','Carlos Santos','Farmacêutico · Curitiba, PR · 5 anos','97',['Manipulação','Atendimento','CRF Ativo','✓ Verificado','🟢 Disponível'],[['Hard skills',98],['Senioridade',95],['Localização',100],['Formação',100]],true)
-     +talentCard('GL','Gabriela Lima','Desenvolvedora React · São Paulo, SP','92',['React','Node','✓ Verificado','🟡 Aberto a propostas'],null,false)
+   +'<div class="card"><div class="pad"><div class="card-h"><h3>Talentos em destaque</h3><span class="more" onclick="navTo(\'buscar\')">Buscar talentos</span></div>'
+     +'<div id="dashTalents" class="grid" style="grid-template-columns:1fr 1fr"><p class="muted">Carregando…</p></div>'
    +'</div></div>'
   +'</div><div class="stack">'
    +'<div class="card"><div class="pad"><h3 style="margin-bottom:6px">ROI dos Vezus</h3><p class="muted" style="margin-bottom:4px">O que o Indeed não mostra com clareza</p><div class="roi"><div><b>16</b><span>Vezus / contratação</span></div><div><b>12,5%</b><span>desbloqueio → contrat.</span></div><div><b>R$ 80</b><span>custo / contratação</span></div></div></div></div>'
