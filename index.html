@@ -276,6 +276,27 @@
   .ring-svg .pct b{font-family:'Sora','Inter',sans-serif;font-weight:800;font-size:26px;color:var(--navy);display:block;line-height:1}
   .ring-svg .pct span{font-weight:600;font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
   .spark{width:100%;height:80px;display:block}
+  /* ===== Buscar talentos (cards de perfil) ===== */
+  .talent{border:1px solid var(--line);border-radius:var(--radius);padding:18px;background:#fff;position:relative;box-shadow:var(--shadow-sm);transition:.18s}
+  .talent:hover{box-shadow:var(--shadow-md)}
+  .talent .lockrow{display:flex;align-items:center;gap:13px}
+  .talent .blur{filter:blur(5px);user-select:none}
+  .talent .lockbadge{position:absolute;top:14px;right:14px}
+  .avatar-lg{width:52px;height:52px;border-radius:14px;background:var(--grad);display:grid;place-items:center;color:#fff;font-weight:800;font-size:17px;font-family:'Sora','Inter',sans-serif;flex:0 0 auto;cursor:pointer}
+  .t-name{font-family:'Sora','Inter',sans-serif;font-weight:700;font-size:16px;color:var(--navy)}
+  .t-sub{color:var(--muted);font-size:12.5px;margin-top:2px}
+  .t-score b{font-family:'Sora','Inter',sans-serif;font-weight:800;font-size:20px;color:var(--green-2)}
+  .t-score small{color:var(--green-2);font-weight:700;font-size:10px;letter-spacing:.1em;text-transform:uppercase}
+  /* ===== Pacotes de Vezus ===== */
+  .pkgs{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .pkg{border:1px solid var(--line-2);border-radius:var(--radius);padding:18px;background:#fff;text-align:center;position:relative}
+  .pkg.pop{border-color:var(--orange);box-shadow:0 14px 34px -16px rgba(224,162,60,.6)}
+  .pkg .ptag{position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:var(--grad-gold);color:#3a2405;font-weight:700;font-size:10px;padding:4px 11px;border-radius:999px;letter-spacing:.06em;text-transform:uppercase}
+  .pkg .nm{font-family:'Sora','Inter',sans-serif;font-weight:700;font-size:13px;color:var(--navy);letter-spacing:.04em;text-transform:uppercase}
+  .pkg .vz{font-family:'Sora','Inter',sans-serif;font-weight:800;font-size:30px;color:#D98E2B;margin:8px 0 2px}
+  .pkg .pr{font-family:'Sora','Inter',sans-serif;font-weight:700;font-size:16px;color:var(--navy)}
+  .pkg .per{font-size:12px;color:var(--muted);margin-bottom:12px}
+  @media(max-width:1000px){.pkgs{grid-template-columns:1fr 1fr}}
 
   .funnel{display:flex;gap:8px;margin-top:6px}
   .fstep{flex:1;text-align:center;padding:14px 6px;border-radius:12px;color:#fff}
@@ -1413,9 +1434,7 @@ function deleteVaga(id){ if(!confirm('Remover esta vaga?')) return; api('/vagas/
 function hydrateFinanceiro(){
   api('/vezus/balance').then(function(b){ setTxt('finSaldo', b.saldo); setTxt('finConsumo', (b.consumo_mes||0)+' Vezus'); }).catch(function(){});
   api('/vezus/packages').then(function(pks){var g=document.getElementById('pkgGrid'); if(!g) return;
-    g.innerHTML=(pks||[]).map(function(p){
-      return '<div class="price '+(p.popular?'pop':'')+'">'+(p.popular?'<div class="badge-pop">POPULAR</div>':'')+'<div class="pt">'+esc(p.nome)+'</div><div class="pv">'+p.vezus+' <span style="font-size:12px;color:var(--muted)">Vezus</span></div><div class="pp">R$ '+Number(p.preco).toFixed(2).replace(".",",")+'</div><button class="btn '+(p.popular?'primary':'ghost')+' block" onclick="comprarPacote(\''+p.id+'\',this)">Comprar</button></div>';
-    }).join('');
+    g.innerHTML=(pks||[]).map(function(p){ return pkgCard(p,'Comprar'); }).join('');
   }).catch(function(){});
   reloadLedger();
 }
@@ -1431,33 +1450,56 @@ function ledgerLabel(reason){var m={purchase:'Compra de pacote',unlock:'Desbloqu
 function comprarPacote(id,btn){ if(btn){btn.disabled=true;btn.textContent='…';}
   api('/vezus/purchase',{method:'POST',body:{pacote:id}}).then(function(d){
     alertMsg('Pacote adicionado! Saldo: '+d.saldo+' Vezus'); setTxt('finSaldo', d.saldo);
-    var pill=document.getElementById('vezusPill'); if(pill) pill.innerHTML='<span class="v">V</span> '+d.saldo+' Vezus';
+    var pill=document.getElementById('vezusPill'); if(pill) pill.innerHTML='<span class="v">V</span> <b>'+d.saldo+'</b>';
     reloadLedger();
   }).catch(function(e){ alertMsg(e.message); }).finally(function(){ if(btn){btn.disabled=false;btn.textContent='Comprar';} });
 }
 
 /* ---- Buscar Talentos + desbloqueio (empresa) ---- */
 function hydrateBuscar(){ buscarTalentos(); }
+function pkgCard(p,btnLabel){
+  var per=p.vezus?('R$ '+(Number(p.preco)/p.vezus).toFixed(2).replace('.',',')+' / Vezu'):'';
+  return '<div class="pkg'+(p.popular?' pop':'')+'">'+(p.popular?'<span class="ptag">Popular</span>':'')
+    +'<div class="nm">'+esc(p.nome)+'</div><div class="vz">'+p.vezus+'</div>'
+    +'<div class="pr">R$ '+Number(p.preco).toFixed(2).replace('.',',')+'</div><div class="per">'+per+'</div>'
+    +'<button class="btn '+(p.popular?'orange':'ghost')+' sm block" onclick="comprarPacote(\''+p.id+'\',this)">'+(btnLabel||'Escolher')+'</button></div>';
+}
+function renderPkgs(id){ api('/vezus/packages').then(function(pks){ var g=document.getElementById(id); if(!g) return; g.innerHTML=(pks||[]).map(function(p){return pkgCard(p);}).join(''); }).catch(function(){}); }
 function buscarTalentos(){
   var q=val('talentQ')||'', box=document.getElementById('talentList');
   if(box) box.innerHTML='<p class="muted">Buscando…</p>';
+  renderPkgs('buscaPkgs');
   api('/company/talentos'+(q?('?q='+encodeURIComponent(q)):'')).then(function(list){ if(!box) return;
-    if(!list||!list.length){ box.innerHTML='<p class="muted">Nenhum candidato encontrado. Ajuste a busca ou aguarde novos cadastros.</p>'; return; }
+    var cnt=document.getElementById('talentCount');
+    if(!list||!list.length){ if(cnt) cnt.textContent='Nenhum talento correspondente'; box.innerHTML='<p class="muted" style="grid-column:1/-1">Nenhum candidato encontrado. Ajuste a busca ou aguarde novos cadastros.</p>'; return; }
+    if(cnt) cnt.textContent=list.length+' talento'+(list.length>1?'s':'')+' correspondente'+(list.length>1?'s':'');
     box.innerHTML=list.map(renderTalent).join('');
   }).catch(function(e){ if(box) box.innerHTML='<p class="muted">'+esc(e.message)+'</p>'; });
 }
-function renderTalent(t){
-  var tags=(t.skills||[]).map(function(s){return '<span class="tag">'+esc(s)+'</span>';}).join('')+(t.disponivel?'<span class="tag">🟢 '+esc(t.disponivel)+'</span>':'');
-  var head='<div class="match-top" style="cursor:pointer" onclick="openTalento('+t.id+')" title="Ver perfil completo"><div class="avatar'+(t.unlocked?'':' blur')+'">'+esc((t.nome||'?').substring(0,2))+'</div><div class="info"><b>'+esc(t.nome)+' <span style="color:var(--blue-2);font-size:11px;font-weight:600">ver perfil ›</span></b><div class="sub">'+esc(t.cargo||'—')+(t.cidade?' · '+esc(t.cidade):'')+'</div></div><div class="match-badge"><b>'+(t.completude||0)+'%</b><span>PERFIL</span></div></div>';
-  var action;
-  if(t.unlocked && t.contato){
-    action='<div style="margin-top:12px;padding:10px;background:var(--green-bg);border-radius:10px;font-size:13px">✓ Desbloqueado — ✉ '+esc(t.contato.email)+(t.contato.telefone?' · 📱 '+esc(t.contato.telefone):'')+'</div>'
-      +'<div class="unlock"><button class="btn ghost" style="flex:1" onclick="msgUser('+t.id+')">✉ Enviar mensagem</button></div>';
-  } else {
-    action='<div class="unlock"><button class="btn dark" style="flex:1" onclick="desbloquear('+t.id+',this)">🔓 Desbloquear Perfil · 1 Vezu</button></div>'+(t.completude>=50?'':'<p class="muted" style="margin-top:8px">Perfil ainda incompleto para desbloqueio.</p>');
-  }
-  var fav='<button class="btn ghost" style="margin-top:8px;width:100%" onclick="toggleFav('+t.id+',this)">'+(t.favorito?'★ Favoritado':'☆ Favoritar')+'</button>';
-  return '<div class="match-card">'+head+'<div class="tags">'+tags+'</div>'+action+fav+'</div>';
+var TAL_GRADS=['linear-gradient(135deg,#4C2FBF,#9D7BFF)','linear-gradient(135deg,#9D7BFF,#4C2FBF)','linear-gradient(135deg,#5B3DEF,#22C58B)','linear-gradient(135deg,#4C2FBF,#5B3DEF)'];
+function renderTalent(t,i){
+  var un=t.unlocked;
+  var badge=un?'<span class="chip mint">✓ desbloqueado</span>':'<span class="chip soft">🔒 bloqueado</span>';
+  var skills=(t.skills||[]);
+  var tagH=skills.slice(0,3).map(function(s,j){ return '<span class="chip'+(!un&&j>0?' blur':'')+'">'+esc(s)+'</span>'; }).join('')
+    +(t.disponivel?'<span class="chip mint">🟢 '+esc(t.disponivel)+'</span>':'');
+  var av=esc((t.nome||'?').substring(0,2).toUpperCase());
+  var nameH='<div class="t-name'+(un?'':' blur')+'">'+esc(t.nome)+'</div>';
+  var cta = un
+    ? '<div class="row" style="gap:8px"><button class="btn ghost sm" onclick="openTalento('+t.id+')">Ver currículo</button><button class="btn primary sm" onclick="msgUser('+t.id+')">Mensagem</button></div>'
+    : (t.completude>=50
+        ? '<button class="btn orange sm" onclick="desbloquear('+t.id+',this)">🪙 Desbloquear · 1 Vezu</button>'
+        : '<span class="muted" style="font-size:12px">perfil incompleto</span>');
+  return '<div class="talent">'
+    +'<span class="lockbadge">'+badge+'</span>'
+    +'<div class="lockrow"><div class="avatar-lg" style="background:'+TAL_GRADS[(i||0)%4]+'" onclick="openTalento('+t.id+')">'+av+'</div>'
+      +'<div>'+nameH+'<div class="t-sub">'+esc(t.cargo||'—')+(t.cidade?' · '+esc(t.cidade):'')+' · '+(t.completude||0)+'% perfil</div></div></div>'
+    +'<div class="row" style="gap:6px;margin:14px 0;flex-wrap:wrap">'+tagH+'</div>'
+    +'<div class="between" style="padding-top:12px;border-top:1px solid var(--line)">'
+      +'<div class="t-score"><b>'+(t.completude||0)+'%</b> <small>perfil</small></div>'
+      +cta+'</div>'
+    +'<button class="btn ghost sm" style="margin-top:10px;width:100%" onclick="toggleFav('+t.id+',this)">'+(t.favorito?'★ Favoritado':'☆ Favoritar')+'</button>'
+    +'</div>';
 }
 function toggleFav(id,btn){
   api('/company/favorito/'+id,{method:'POST'}).then(function(d){
@@ -1468,7 +1510,7 @@ function toggleFav(id,btn){
 function desbloquear(id,btn){ if(btn){btn.disabled=true;btn.textContent='Desbloqueando…';}
   api('/company/unlock/'+id,{method:'POST'}).then(function(d){
     alertMsg('Perfil desbloqueado! Saldo: '+d.saldo+' Vezus');
-    var pill=document.getElementById('vezusPill'); if(pill) pill.innerHTML='<span class="v">V</span> '+d.saldo+' Vezus';
+    var pill=document.getElementById('vezusPill'); if(pill) pill.innerHTML='<span class="v">V</span> <b>'+d.saldo+'</b>';
     buscarTalentos();
   }).catch(function(e){ if(btn){btn.disabled=false;btn.textContent='🔓 Desbloquear Perfil · 1 Vezu';} alertMsg(e.message); });
 }
@@ -1501,7 +1543,7 @@ function openTalento(id){
 }
 function desbloquearModal(id,btn){ if(btn){btn.disabled=true;btn.textContent='Desbloqueando…';}
   api('/company/unlock/'+id,{method:'POST'}).then(function(d){
-    var pill=document.getElementById('vezusPill'); if(pill) pill.innerHTML='<span class="v">V</span> '+d.saldo+' Vezus';
+    var pill=document.getElementById('vezusPill'); if(pill) pill.innerHTML='<span class="v">V</span> <b>'+d.saldo+'</b>';
     alertMsg('Perfil desbloqueado! Saldo: '+d.saldo+' Vezus');
     openTalento(id);
     if(state.page==='buscar') buscarTalentos();
@@ -1774,10 +1816,10 @@ var PAGES_E={
   +'<div class="page-h"><div><h1>Olá, '+nome+' 👋</h1><p>Aqui está o resumo da sua busca por talentos.</p></div>'
   +'<div style="display:flex;gap:10px"><button class="btn ghost" onclick="obInit(\'E\')">✦ Completar cadastro</button><button class="btn orange" onclick="navTo(\'financeiro\')">✦ Comprar Vezus</button><button class="btn dark" onclick="navTo(\'buscar\')">⌕ Buscar Talentos</button></div></div>'
   +'<div class="grid kpis">'
-   +kpi('i-orange','⚡','—','Saldo de Vezus','','keSaldo')
-   +kpi('i-blue','◎','—','Visualizações das vagas','','keViews')
-   +kpi('i-purple','👥','—','Candidatos','','keCand')
-   +kpi('i-pink','◈','—','Matches da IA','','keMatches')
+   +'<div class="card kpi"><div class="ico v-violet">◎</div><div class="val" id="keViews">—</div><div class="lab">Visualizações das vagas</div></div>'
+   +'<div class="card kpi"><div class="ico v-indigo">👥</div><div class="val" id="keCand">—</div><div class="lab">Candidatos</div></div>'
+   +'<div class="card kpi"><div class="ico v-mint">✦</div><div class="val" id="keMatches">—</div><div class="lab">Matches da IA</div></div>'
+   +'<div class="card kpi feat"><div class="ico" style="background:rgba(224,162,60,.25);color:#E0A23C">⚡</div><div class="val" id="keSaldo">—</div><div class="lab">Saldo de Vezus</div></div>'
   +'</div>'
   +'<div class="cols" style="margin-top:16px"><div class="stack">'
    +'<div class="card"><div class="pad"><div class="sec-h"><h3>Contratações por Mês</h3><span class="muted">Ritmo de crescimento do time</span></div><div id="barChart"></div></div></div>'
@@ -1794,9 +1836,14 @@ var PAGES_E={
    +'<div class="card"><div class="pad"><h3 style="margin-bottom:8px">Feed de Atividades</h3><div id="feedBox"><p class="muted">Sem atividades ainda.</p></div></div></div>'
   +'</div></div></div>';},
 
- buscar:function(){return page('Buscar Talentos','Encontre os melhores profissionais para sua empresa.','',
-  '<div class="card" style="background:linear-gradient(135deg,#4C2FBF,#5B3DEF);color:#fff;margin-bottom:16px"><div class="pad"><h3 style="color:#fff">✦ Match Inteligente com IA</h3><p style="color:#cdd7f5;font-size:13px;margin:6px 0 12px">Descreva o profissional ideal (cargo, cidade, skills) e busque no banco de talentos.</p><div style="display:flex;gap:10px"><input class="inp2" id="talentQ" style="flex:1" placeholder="Ex: farmacêutico Curitiba manipulação" onkeydown="if(event.key===\'Enter\')buscarTalentos()"><button class="btn orange" onclick="buscarTalentos()">Buscar</button></div></div></div>'
-  +'<div id="talentList"><p class="muted">Carregando…</p></div>');},
+ buscar:function(){return page('Buscar talentos','Ranqueado por match. O topo do funil é grátis — pague só para desbloquear.','',
+  '<div class="card" style="background:linear-gradient(120deg,#F7F4FF,#fff);margin-bottom:18px"><div class="pad">'
+    +'<div class="row" style="gap:12px;align-items:center"><div class="ico v-violet" style="width:40px;height:40px;border-radius:11px;display:grid;place-items:center;font-size:18px">✦</div>'
+    +'<input class="inp2" id="talentQ" style="flex:1;border:none;background:transparent;font-weight:600" placeholder="Ex: farmacêutico em Curitiba com experiência em manipulação" onkeydown="if(event.key===\'Enter\')buscarTalentos()">'
+    +'<button class="btn primary sm" onclick="buscarTalentos()">Buscar com IA</button></div></div></div>'
+  +'<div class="between" style="margin-bottom:14px"><span id="talentCount" style="font-family:\'Sora\',sans-serif;font-weight:700;font-size:14px;color:var(--navy)">Buscando talentos…</span><span class="chip gold">🪙 Desbloqueio = 1 Vezu</span></div>'
+  +'<div id="talentList" class="grid" style="grid-template-columns:1fr 1fr"><p class="muted">Carregando…</p></div>'
+  +'<div class="card" style="margin-top:20px"><div class="pad"><div class="card-h"><h3>Recarregar Vezus</h3><span class="chip gold" style="margin-left:auto">quanto maior o pacote, menor o preço/Vezu</span></div><div id="buscaPkgs" class="pkgs"><p class="muted">Carregando pacotes…</p></div></div></div>');},
 
  vagas:function(){return page('Gestão de Vagas','Gerencie suas vagas abertas e acompanhe os candidatos.','<button class="btn dark" id="vagaAddBtn">+ Publicar Vaga</button>',
   '<div id="vagaForm" class="card" style="margin-bottom:16px;display:none"><div class="pad" id="vagaFormBody"></div></div><div id="myVagas"><p class="muted">Carregando…</p></div>');},
@@ -1815,7 +1862,7 @@ var PAGES_E={
 
  financeiro:function(){return page('Financeiro','Gerencie seus créditos, planos e histórico de compras.','',
   '<div class="cols"><div class="stack">'
-  +'<div class="card"><div class="pad"><h3 style="margin-bottom:12px">Comprar Pacotes de Vezus</h3><div id="pkgGrid" class="grid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))"><p class="muted">Carregando…</p></div><p class="muted" style="margin-top:12px">Compra simulada nesta fase (sem gateway de pagamento).</p></div></div>'
+  +'<div class="card"><div class="pad"><h3 style="margin-bottom:12px">Comprar Pacotes de Vezus</h3><div id="pkgGrid" class="pkgs"><p class="muted">Carregando…</p></div><p class="muted" style="margin-top:12px">Compra simulada nesta fase (sem gateway de pagamento).</p></div></div>'
   +'<div class="card"><div class="pad"><h3 style="margin-bottom:6px">Histórico Financeiro (extrato)</h3><div id="ledgerBox"><p class="muted">Carregando…</p></div></div></div>'
   +'</div><div class="stack">'
    +'<div class="card"><div class="pad" style="text-align:center"><div class="muted" style="text-transform:uppercase;letter-spacing:1px;font-size:11px">Saldo atual</div><div id="finSaldo" style="font-size:44px;font-weight:800;color:var(--orange-2);margin:6px 0">—</div><div class="muted">Vezus</div><div style="background:var(--bg);border-radius:12px;padding:12px;margin-top:14px"><div class="muted">Consumo neste mês</div><b id="finConsumo" style="font-size:20px">—</b></div></div></div>'
