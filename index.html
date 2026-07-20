@@ -438,6 +438,8 @@
   @keyframes paysp{to{transform:rotate(360deg)}}
   .pay-ok{text-align:center;padding:20px 0}
   .pay-ok .ic{width:60px;height:60px;border-radius:50%;background:var(--grad-mint,linear-gradient(135deg,#22C58B,#8ee6bf));color:#fff;display:grid;place-items:center;font-size:30px;margin:0 auto 12px}
+  .wa-btn{display:inline-flex;align-items:center;gap:5px;background:#25D366;color:#fff;font-weight:700;font-size:12px;padding:6px 11px;border-radius:8px;text-decoration:none;margin-left:8px;vertical-align:middle;white-space:nowrap}
+  .wa-btn:hover{background:#1ebe5b;color:#fff}
 </style>
 </head>
 <body>
@@ -1227,6 +1229,7 @@ function fmtMonth(v){ // "2021-03" -> "mar/2021"
   var nomes=['','jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
   return (nomes[parseInt(m[1],10)]||m[1])+'/'+m[0];
 }
+function expPeriodo(e){ var ini=fmtMonth(e.inicio); var atual=(e.atual==='1'||e.atual===1||e.atual===true); var fim=atual?'Atual':fmtMonth(e.fim); return [ini,fim].filter(Boolean).join(' — '); }
 function collReload(page){var cfg=COLL[page];
   api(cfg.ep).then(function(list){var box=document.getElementById('collList'); if(!box) return;
     if(!list||!list.length){ box.innerHTML='<p class="muted">Nenhum registro ainda. Clique em “+ Adicionar”.</p>'; return; }
@@ -1317,7 +1320,7 @@ function hydrateCurriculo(){
     var nome=esc(p.nome||u.nome||'Seu nome');
     var hard=((sk.hard)||[]).map(function(h){return skill(esc(h.nome),h.nivel||0);}).join('')||'<p class="muted">Sem hard skills. Adicione em Habilidades.</p>';
     var soft=((sk.soft)||[]).map(function(s){return '<span class="tag">'+esc(s)+'</span>';}).join('');
-    var expH=((exp)||[]).map(function(e){return '<div class="listcard"><div class="li">▤</div><div><h4>'+esc(e.cargo||e.titulo||'—')+'</h4><div class="meta">'+[e.empresa,e.inicio,e.fim].filter(Boolean).map(esc).join(' · ')+'</div>'+(e.descricao?'<div class="meta">'+esc(e.descricao)+'</div>':'')+'</div></div>';}).join('')||'<p class="muted">Sem experiências. Adicione em Experiências.</p>';
+    var expH=((exp)||[]).map(function(e){return '<div class="listcard"><div class="li">▤</div><div><h4>'+esc(e.cargo||e.titulo||'—')+'</h4><div class="meta">'+[e.empresa,expPeriodo(e)].filter(Boolean).map(esc).join(' · ')+'</div>'+(e.descricao?'<div class="meta">'+esc(e.descricao)+'</div>':'')+'</div></div>';}).join('')||'<p class="muted">Sem experiências. Adicione em Experiências.</p>';
     var eduH=((edu)||[]).map(function(e){return '<div class="listcard"><div class="li">◑</div><div><h4>'+esc(e.curso||e.titulo||'—')+'</h4><div class="meta">'+[e.instituicao,e.nivel,e.ano_conclusao].filter(Boolean).map(esc).join(' · ')+'</div></div></div>';}).join('');
     var contato=[p.cidade?'◎ '+esc(p.cidade):'', u.email?'✉ '+esc(u.email):'', p.telefone?'📱 '+esc(p.telefone):'', p.linkedin?esc(p.linkedin):''].filter(Boolean).join(' · ');
     box.innerHTML='<div class="card"><div style="background:var(--navy);color:#fff;padding:26px;border-radius:16px 16px 0 0"><h2 style="font-size:22px">'+nome+'</h2><div style="color:#8fa0d8;font-weight:600;margin:4px 0 10px">'+esc(p.cargo_desejado||'')+'</div>'+(p.resumo?'<p style="color:#c7d0ea;font-size:13px;max-width:640px;line-height:1.6">'+esc(p.resumo)+'</p>':'')+(contato?'<div style="color:#aeb9e0;font-size:12px;margin-top:12px">'+contato+'</div>':'')+'</div>'
@@ -1501,7 +1504,7 @@ function openPayModal(pkg){
   var html=''
     +'<div class="pay-head"><h3>Comprar Vezus</h3><p class="muted">Pagamento seguro via Mercado Pago</p></div>'
     +'<div class="pay-sum"><div><div class="pv">'+pkg.vezus+' Vezus</div><div class="muted" style="font-size:12px">'+esc(pkg.nome)+'</div></div><div class="pp">'+preco+'</div></div>'
-    +'<div class="pay-tabs"><button id="ptPix" class="on" onclick="payTab(\'pix\')">Pix</button><button id="ptCard" onclick="payTab(\'card\')">Cartão</button></div>'
+    +'<div class="pay-tabs"><button id="ptPix" class="on" onclick="payTab(\'pix\')">Pix</button><button id="ptCard" onclick="payTab(\'card\')">Cartão</button><button id="ptBoleto" onclick="payTab(\'boleto\')">Boleto</button></div>'
     +'<div class="pay-body" id="payBody"></div>';
   openModal(html);
   payTab('pix');
@@ -1509,10 +1512,11 @@ function openPayModal(pkg){
 
 function payTab(which){
   clearPoll();
-  var a=document.getElementById('ptPix'), b=document.getElementById('ptCard');
+  var a=document.getElementById('ptPix'), b=document.getElementById('ptCard'), c=document.getElementById('ptBoleto');
   if(a) a.classList.toggle('on', which==='pix');
   if(b) b.classList.toggle('on', which==='card');
-  if(which==='pix') payPixStart(); else payCardStart();
+  if(c) c.classList.toggle('on', which==='boleto');
+  if(which==='pix') payPixStart(); else if(which==='card') payCardStart(); else payBoletoStart();
 }
 
 function payPixStart(){
@@ -1621,6 +1625,50 @@ function paySuccess(saldo){
   setTimeout(function(){ var back=document.getElementById('modalBack'); if(back) back.classList.remove('show'); },2400);
 }
 
+/* ---- Boleto ---- */
+function payBoletoStart(){
+  var body=document.getElementById('payBody'); if(!body) return;
+  var nome=(VZ.user&&(VZ.user.nome||VZ.user.name||VZ.user.display_name))||'';
+  body.innerHTML=''
+    +'<form id="boletoForm" onsubmit="return false">'
+    +'<p class="muted" style="font-size:12.5px;margin-bottom:12px">O boleto é compensado em 1–3 dias úteis. Os Vezus entram automaticamente assim que o pagamento for confirmado.</p>'
+    +'<div class="pay-field"><label>Nome completo / Razão social</label><input type="text" id="blNome" value="'+esc(nome)+'" placeholder="Nome do pagador"></div>'
+    +'<div class="pay-row"><div class="pay-field" style="max-width:130px"><label>Documento</label><select id="blDocTipo"><option value="cpf">CPF</option><option value="cnpj">CNPJ</option></select></div>'
+    +'<div class="pay-field"><label>Número do documento</label><input type="text" id="blDoc" placeholder="Somente números"></div></div>'
+    +'<div class="pay-row"><div class="pay-field" style="max-width:150px"><label>CEP</label><input type="text" id="blCep" placeholder="00000-000"></div>'
+    +'<div class="pay-field"><label>Rua / Logradouro</label><input type="text" id="blRua" placeholder="Rua, avenida…"></div></div>'
+    +'<div class="pay-row"><div class="pay-field" style="max-width:120px"><label>Número</label><input type="text" id="blNumero" placeholder="Nº"></div>'
+    +'<div class="pay-field"><label>Bairro</label><input type="text" id="blBairro" placeholder="Bairro"></div></div>'
+    +'<div class="pay-row"><div class="pay-field"><label>Cidade</label><input type="text" id="blCidade" placeholder="Cidade"></div>'
+    +'<div class="pay-field" style="max-width:90px"><label>UF</label><input type="text" id="blUf" maxlength="2" placeholder="SP" style="text-transform:uppercase"></div></div>'
+    +'<button type="button" class="btn primary block" id="blSubmit" onclick="payBoletoSubmit()">Gerar boleto</button>'
+    +'<div class="pay-status" id="blStatus" style="display:none;margin-top:10px"><span class="pay-spin"></span> Gerando boleto…</div>'
+    +'</form>';
+}
+
+function payBoletoSubmit(){
+  var st=document.getElementById('blStatus'), sub=document.getElementById('blSubmit');
+  var payload={ pacote:MP_STATE.pkg.id,
+    nome:val('blNome'), documento:val('blDoc'), tipo_doc:val('blDocTipo'),
+    cep:val('blCep'), rua:val('blRua'), numero:val('blNumero'), bairro:val('blBairro'), cidade:val('blCidade'), uf:val('blUf') };
+  if(!payload.documento||!payload.cep||!payload.rua||!payload.numero||!payload.cidade||!payload.uf){ alertMsg('Preencha documento e endereço completo.'); return; }
+  if(st){ st.style.display='flex'; st.style.color=''; st.innerHTML='<span class="pay-spin"></span> Gerando boleto…'; }
+  if(sub) sub.disabled=true;
+  api('/pay/boleto',{method:'POST',body:payload}).then(function(d){
+    var body=document.getElementById('payBody'); if(!body) return;
+    body.innerHTML=''
+      +'<div class="pay-ok"><div class="ic" style="background:var(--grad)">🧾</div>'
+      +'<p style="font-weight:700;font-family:Sora,Inter,sans-serif;margin:0">Boleto gerado!</p>'
+      +'<p class="muted" style="font-size:13px;margin-top:4px">Os Vezus entram assim que o pagamento for compensado (1–3 dias úteis).</p></div>'
+      +(d.boleto_url?'<a class="btn primary block" href="'+esc(d.boleto_url)+'" target="_blank" rel="noopener" style="margin-top:6px">Abrir / imprimir boleto</a>':'')
+      +(d.barcode?'<div class="pix-code" style="margin-top:10px"><input id="blBar" readonly value="'+esc(d.barcode)+'"><button class="btn ghost sm" onclick="copyBar(this)">Copiar</button></div>':'');
+  }).catch(function(e){ if(st){ st.style.color='var(--red)'; st.textContent=e.message; } if(sub) sub.disabled=false; });
+}
+
+function copyBar(btn){ var i=document.getElementById('blBar'); if(!i) return; i.select();
+  try{ navigator.clipboard.writeText(i.value); }catch(e){ try{document.execCommand('copy');}catch(_){} }
+  if(btn){ btn.textContent='Copiado!'; setTimeout(function(){btn.textContent='Copiar';},1500); } }
+
 /* ---- Buscar Talentos + desbloqueio (empresa) ---- */
 function hydrateBuscar(){ buscarTalentos(); }
 function pkgCard(p,btnLabel){
@@ -1685,15 +1733,22 @@ function msgUser(id){ closeModal(); navTo('mensagens'); setTimeout(function(){ o
 /* ---- Modal de perfil do talento ---- */
 function openModal(html){ var b=document.getElementById('modalBody'); if(b) b.innerHTML=html; var back=document.getElementById('modalBack'); if(back) back.classList.add('show'); }
 function closeModal(e){ if(e&&e.target&&e.target.id!=='modalBack') return; if(typeof clearPoll==='function') clearPoll(); var back=document.getElementById('modalBack'); if(back) back.classList.remove('show'); }
+function waHref(tel,nome){
+  var d=(''+(tel||'')).replace(/\D/g,''); if(!d) return '';
+  if(d.length<=11 && d.indexOf('55')!==0){ d='55'+d; }
+  var pnome=(''+(nome||'')).trim().split(/\s+/)[0]||'';
+  var msg='Olá'+(pnome?', '+pnome:'')+'! Vi seu perfil no Vezulo e gostaria de conversar sobre uma oportunidade. Podemos falar?';
+  return 'https://wa.me/'+d+'?text='+encodeURIComponent(msg);
+}
 function openTalento(id){
   openModal('<div class="pad"><p class="muted">Carregando…</p></div>');
   api('/company/talento/'+id).then(function(t){
     var hard=((t.skills&&t.skills.hard)||[]).map(function(h){return skill(esc(h.nome),h.nivel||0);}).join('')||'<p class="muted">Sem hard skills.</p>';
     var soft=((t.skills&&t.skills.soft)||[]).map(function(s){return '<span class="tag">'+esc(s)+'</span>';}).join('');
-    var exp=((t.experiencias)||[]).map(function(e){return '<div class="listcard"><div class="li">▤</div><div><h4>'+esc(e.cargo||e.titulo||'—')+'</h4><div class="meta">'+[e.empresa,e.inicio,e.fim].filter(Boolean).map(esc).join(' · ')+'</div>'+(e.descricao?'<div class="meta">'+esc(e.descricao)+'</div>':'')+'</div></div>';}).join('')||'<p class="muted">Sem experiências cadastradas.</p>';
+    var exp=((t.experiencias)||[]).map(function(e){return '<div class="listcard"><div class="li">▤</div><div><h4>'+esc(e.cargo||e.titulo||'—')+'</h4><div class="meta">'+[e.empresa,expPeriodo(e)].filter(Boolean).map(esc).join(' · ')+'</div>'+(e.descricao?'<div class="meta">'+esc(e.descricao)+'</div>':'')+'</div></div>';}).join('')||'<p class="muted">Sem experiências cadastradas.</p>';
     var edu=((t.formacao)||[]).map(function(e){return '<div class="listcard"><div class="li">◑</div><div><h4>'+esc(e.curso||e.titulo||'—')+'</h4><div class="meta">'+[e.instituicao,e.nivel,e.ano_conclusao].filter(Boolean).map(esc).join(' · ')+'</div></div></div>';}).join('');
     var cta = t.unlocked
-      ? '<div style="padding:12px;background:var(--green-bg);border-radius:10px;font-size:13px">✓ ✉ '+esc(t.contato.email)+(t.contato.telefone?' · 📱 '+esc(t.contato.telefone):'')+(t.contato.linkedin?' · '+esc(t.contato.linkedin):'')+'</div><div class="unlock"><button class="btn primary" style="flex:1" onclick="msgUser('+t.id+')">✉ Enviar mensagem</button></div>'
+      ? '<div style="padding:12px;background:var(--green-bg);border-radius:10px;font-size:13px">✓ ✉ '+esc(t.contato.email)+(t.contato.telefone?' · 📱 '+esc(t.contato.telefone)+'<a class="wa-btn" href="'+waHref(t.contato.telefone,t.nome)+'" target="_blank" rel="noopener">💬 WhatsApp</a>':'')+(t.contato.linkedin?' · '+esc(t.contato.linkedin):'')+'</div><div class="unlock"><button class="btn primary" style="flex:1" onclick="msgUser('+t.id+')">✉ Enviar mensagem</button></div>'
       : '<div class="unlock"><button class="btn dark" style="flex:1" onclick="desbloquearModal('+t.id+',this)">🔓 Desbloquear Perfil · 1 Vezu</button></div>'+(t.completude>=50?'':'<p class="muted" style="margin-top:8px">Perfil ainda incompleto para desbloqueio.</p>');
     openModal('<div class="pad">'
       +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><div style="display:flex;gap:14px;align-items:center"><div class="avatar'+(t.unlocked?'':' blur')+'" style="width:52px;height:52px;font-size:16px">'+esc((t.nome||'?').substring(0,2))+'</div><div><h2 style="font-size:20px">'+esc(t.nome)+'</h2><div class="muted">'+esc(t.cargo||'—')+(t.cidade?' · '+esc(t.cidade):'')+' · '+(t.completude||0)+'% perfil</div></div></div><button class="icobtn" onclick="closeModal()">✕</button></div>'
