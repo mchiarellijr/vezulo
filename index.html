@@ -1615,12 +1615,22 @@ function payCardSubmit(){
   }).catch(function(e){ if(st){ st.style.color='var(--red)'; st.textContent=e.message; } if(sub) sub.disabled=false; });
 }
 
+/* Atualiza TODOS os lugares que exibem o saldo de Vezus (pílula, KPI do dashboard,
+   anel e financeiro), pra nunca ficar defasado após compra/desbloqueio. */
+function setSaldoUI(s){
+  if(s==null) return;
+  setTxt('finSaldo', s);
+  setTxt('keSaldo', s);
+  setTxt('ringSaldoNum', s);
+  var ring=document.getElementById('ringSaldo'); if(ring) ring.style.setProperty('--p', Math.min(100, Number(s)||0));
+  var pill=document.getElementById('vezusPill'); if(pill) pill.innerHTML='<span class="v">V</span> <b>'+s+'</b>';
+}
+
 function paySuccess(saldo){
   clearPoll();
   var body=document.getElementById('payBody');
   if(body) body.innerHTML='<div class="pay-ok"><div class="ic">✓</div><p style="font-weight:700;font-family:Sora,Inter,sans-serif;margin:0">Pagamento aprovado!</p><p class="muted" style="font-size:13px;margin-top:4px">Seus Vezus já estão na sua conta.</p></div>';
-  function apply(s){ setTxt('finSaldo', s); var pill=document.getElementById('vezusPill'); if(pill) pill.innerHTML='<span class="v">V</span> <b>'+s+'</b>'; }
-  if(saldo!=null){ apply(saldo); } else { api('/vezus/balance').then(function(b){ apply(b.saldo); }).catch(function(){}); }
+  if(saldo!=null){ setSaldoUI(saldo); } else { api('/vezus/balance').then(function(b){ setSaldoUI(b.saldo); }).catch(function(){}); }
   reloadLedger();
   setTimeout(function(){ var back=document.getElementById('modalBack'); if(back) back.classList.remove('show'); },2400);
 }
@@ -1764,7 +1774,7 @@ function openTalento(id){
 }
 function desbloquearModal(id,btn){ if(btn){btn.disabled=true;btn.textContent='Desbloqueando…';}
   api('/company/unlock/'+id,{method:'POST'}).then(function(d){
-    var pill=document.getElementById('vezusPill'); if(pill) pill.innerHTML='<span class="v">V</span> <b>'+d.saldo+'</b>';
+    setSaldoUI(d.saldo);
     alertMsg('Perfil desbloqueado! Saldo: '+d.saldo+' Vezus');
     openTalento(id);
     if(state.page==='buscar') buscarTalentos();
