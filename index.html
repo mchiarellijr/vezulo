@@ -465,6 +465,12 @@
   .ob-foot{display:flex;align-items:center;gap:10px;padding:14px 24px 22px}
   .ob-foot .sp{flex:1}
   .ob-back .btn{font-size:13.5px}
+
+  /* ---------- MODELOS DE VAGA ---------- */
+  .modelo-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 14px;margin-bottom:16px;border:1px dashed var(--line-2);border-radius:12px;background:linear-gradient(120deg,var(--blue-soft),#fff)}
+  .modelo-bar .lbl{white-space:nowrap;font-weight:700;color:var(--blue)}
+  .modelo-bar select{flex:1;min-width:200px}
+  .modelo-tip{font-size:12.5px;color:var(--green-2);background:var(--green-bg);border-radius:8px;padding:8px 12px;font-weight:600}
 </style>
 </head>
 <body>
@@ -632,6 +638,7 @@
   <div class="backdrop" id="backdrop" onclick="toggleSide(false)"></div>
   <div class="modal-back" id="modalBack" onclick="closeModal(event)"><div class="modal" id="modalBody"></div></div>
   <div class="ob-back" id="obTour"><div class="ob-card" id="obCard"></div></div>
+  <datalist id="dlSkills"></datalist>
   <input type="file" id="avatarInput" accept="image/png,image/jpeg,image/webp" style="display:none" onchange="onAvatarPicked(event)">
   <div class="main">
     <div class="top">
@@ -790,6 +797,7 @@ var obState={role:'C',step:0,data:{},formacao:[],experiencia:[],idiomas:[],hard:
 function obTitles(){ return obState.role==='E'?OB_TITLES_E:OB_TITLES; }
 
 function obInit(role){
+  loadCatalog();
   role=(role==='E'||role==='empresa')?'E':((role==='C'||role==='candidato')?'C':(roleToCode((VZ.user&&VZ.user.role)||'candidato')));
   obState={role:role,step:0,data:{},formacao:[],experiencia:[],idiomas:[{idioma:'Português',nivel:'Nativo'}],hard:[],soft:[],conhecimentos:[],estados:[],cnh:[]};
   var head=document.getElementById('obHead'), sub=document.getElementById('obSub');
@@ -903,7 +911,7 @@ function obStepHTML(i){
       +'<div class="full"><label class="lbl">Descrição</label><textarea class="inp2" id="obe_desc"></textarea></div>'
     +'</div><button class="btn ghost" style="margin-top:10px" onclick="obAddExp()">+ Incluir experiência</button>'; }
   if(i===3){ return '<h3 style="margin-bottom:2px">4. Habilidades técnicas (hard skills)</h3><p class="muted" style="font-size:12.5px;margin-bottom:10px">Adicione a competência e dê uma nota de 0 a 10 para o seu domínio.</p>'
-    +'<div class="hs-add"><input class="inp2" id="obhs_nome" placeholder="Ex: React, Excel avançado…" onkeydown="if(event.key===\'Enter\'){event.preventDefault();obAddHard();}"><select class="inp2" id="obhs_nivel" style="max-width:110px">'+[0,1,2,3,4,5,6,7,8,9,10].map(function(n){return '<option value="'+n+'"'+(n===7?' selected':'')+'>'+n+'/10</option>';}).join('')+'</select><button class="btn dark" onclick="obAddHard()">+ Adicionar</button></div><div id="obHardList" style="margin-top:12px">'+obHardList()+'</div>'
+    +'<div class="hs-add"><input class="inp2" id="obhs_nome" list="dlSkills" autocomplete="off" placeholder="Ex: React, Excel avançado…" onkeydown="if(event.key===\'Enter\'){event.preventDefault();obAddHard();}"><select class="inp2" id="obhs_nivel" style="max-width:110px">'+[0,1,2,3,4,5,6,7,8,9,10].map(function(n){return '<option value="'+n+'"'+(n===7?' selected':'')+'>'+n+'/10</option>';}).join('')+'</select><button class="btn dark" onclick="obAddHard()">+ Adicionar</button></div><div id="obHardList" style="margin-top:12px">'+obHardList()+'</div>'
     +'<h3 style="margin:22px 0 2px">Habilidades comportamentais (soft skills)</h3><p class="muted" style="font-size:12.5px;margin-bottom:10px">Marque as que combinam com você.</p><div id="obSoftGrid" class="soft-grid">'+obSoftGrid()+'</div>'
     +'<div class="hs-add" style="margin-top:12px"><input class="inp2" id="obss_nome" placeholder="Adicionar outra soft skill…" onkeydown="if(event.key===\'Enter\'){event.preventDefault();obAddSoft();}"><button class="btn ghost" onclick="obAddSoft()">+ Adicionar</button></div>'
     +'<h3 style="margin:22px 0 10px">Idiomas</h3><div id="obIdList">'+obIdList()+'</div>'
@@ -931,7 +939,7 @@ function obRepList(kind){var arr=obState[kind]; if(!arr.length) return '<p class
   return arr.map(function(it,idx){var t=(kind==='formacao')?(it.curso||'—'):(it.cargo||'—');var m=(kind==='formacao')?[it.instituicao,it.nivel,it.ano_conclusao]:[it.empresa,it.inicio,it.fim];
     return '<div class="listcard" style="margin-bottom:8px"><div class="li">'+(kind==='formacao'?'◑':'▤')+'</div><div><h4>'+esc(t)+'</h4><div class="meta">'+m.filter(Boolean).map(esc).join(' · ')+'</div></div><div class="actions"><button class="icobtn" onclick="obDel(\''+kind+'\','+idx+')">🗑</button></div></div>';}).join('');}
 function obHardList(){return obState.hard.length?obState.hard.map(function(h,i){var n=Math.round((Number(h.nivel)||0)/10);var segs='';for(var s=1;s<=10;s++){segs+='<i class="'+(s<=n?'on':'')+'"></i>';}return '<div class="hardrow"><span class="hn">'+esc(h.nome)+'</span><div class="hsegs">'+segs+'</div><span class="hscore">'+n+'/10</span><button class="icobtn" style="width:26px;height:26px" onclick="obDelSkill(\'hard\','+i+')">×</button></div>';}).join(''):'<p class="muted" style="font-size:13px">Nenhuma hard skill ainda.</p>';}
-function obSoftGrid(){var todas=SOFT_SUGERIDAS.slice();obState.soft.forEach(function(s){if(todas.indexOf(s)===-1)todas.push(s);});return todas.map(function(s){var on=obState.soft.indexOf(s)>-1;return '<button type="button" class="soft-chip'+(on?' on':'')+'" onclick="obSoftToggle('+JSON.stringify(s).replace(/"/g,'&quot;')+')">'+(on?'✓ ':'')+esc(s)+'</button>';}).join('');}
+function obSoftGrid(){var todas=softSuggest().slice();obState.soft.forEach(function(s){if(todas.indexOf(s)===-1)todas.push(s);});return todas.map(function(s){var on=obState.soft.indexOf(s)>-1;return '<button type="button" class="soft-chip'+(on?' on':'')+'" onclick="obSoftToggle('+JSON.stringify(s).replace(/"/g,'&quot;')+')">'+(on?'✓ ':'')+esc(s)+'</button>';}).join('');}
 function obSoftToggle(nome){var idx=obState.soft.indexOf(nome);if(idx>-1)obState.soft.splice(idx,1);else obState.soft.push(nome);var g=document.getElementById('obSoftGrid');if(g)g.innerHTML=obSoftGrid();}
 function obIdList(){return obState.idiomas.length?obState.idiomas.map(function(x,i){return '<div class="listcard" style="margin-bottom:8px"><div class="li">🗣</div><div><h4>'+esc(x.idioma)+'</h4><div class="meta">'+esc(x.nivel||'')+'</div></div><div class="actions"><button class="icobtn" onclick="obDelIdioma('+i+')">🗑</button></div></div>';}).join(''):'<p class="muted">Nenhum idioma.</p>';}
 function obAddForm(){var c=(val('obf_curso')||'').trim(); if(!c){alertMsg('Informe o curso.');return;} obState.formacao.push({curso:c,instituicao:val('obf_inst'),nivel:val('obf_nivel'),ano_conclusao:val('obf_ano')}); renderOnboarding();}
@@ -1346,7 +1354,31 @@ function collDelete(page,id){ if(!confirm('Remover este registro?')) return; var
 /* ---- Habilidades ---- */
 var SOFT_SUGERIDAS=['Comunicação','Trabalho em equipe','Liderança','Proatividade','Organização','Resolução de problemas','Pensamento crítico','Criatividade','Adaptabilidade','Gestão de tempo','Empatia','Negociação','Inteligência emocional','Foco em resultados','Atenção aos detalhes','Aprendizado contínuo'];
 var vzSkills={hard:[],soft:[]};
+
+/* ---- Catálogo (taxonomia de skills + modelos de vaga) ---- */
+var vzCatalog=null, vzTemplates=null;
+function loadCatalog(cb){
+  if(vzCatalog){ if(cb) cb(); return; }
+  api('/catalogo/skills',{auth:false}).then(function(d){
+    vzCatalog=d||{grupos:[],flat:[],soft:[]};
+    fillSkillDatalist();
+    if(cb) cb();
+  }).catch(function(){ vzCatalog={grupos:[],flat:[],soft:[]}; if(cb) cb(); });
+}
+function loadTemplates(cb){
+  if(vzTemplates){ if(cb) cb(); return; }
+  api('/catalogo/modelos-vaga',{auth:false}).then(function(list){ vzTemplates=list||[]; if(cb) cb(); })
+    .catch(function(){ vzTemplates=[]; if(cb) cb(); });
+}
+function fillSkillDatalist(){
+  var dl=document.getElementById('dlSkills'); if(!dl||!vzCatalog) return;
+  var flat=vzCatalog.flat||[];
+  dl.innerHTML=flat.map(function(s){ return '<option value="'+esc(s)+'"></option>'; }).join('');
+}
+function softSuggest(){ return (vzCatalog&&vzCatalog.soft&&vzCatalog.soft.length)?vzCatalog.soft:SOFT_SUGERIDAS; }
+
 function hydrateHabilidades(){
+  loadCatalog();
   api('/candidate/skills').then(function(s){ vzSkills={hard:(s&&s.hard)||[],soft:(s&&s.soft)||[]}; renderSkills(); }).catch(function(){ renderSkills(); });
   var b=document.getElementById('btnSaveSkills'); if(b) b.onclick=saveSkills;
 }
@@ -1363,7 +1395,7 @@ function renderSkills(){
   // SOFT: grid de chips marcáveis (sugeridas + as que o candidato já tem)
   var sg=document.getElementById('softGrid');
   if(sg){
-    var todas=SOFT_SUGERIDAS.slice();
+    var todas=softSuggest().slice();
     vzSkills.soft.forEach(function(s){ if(todas.indexOf(s)===-1) todas.push(s); });
     sg.innerHTML=todas.map(function(s){
       var on=vzSkills.soft.indexOf(s)>-1;
@@ -1523,19 +1555,43 @@ function candidatar(id,btn){
 /* ---- Vagas: empresa ---- */
 function vagaFormToggle(){var f=document.getElementById('vagaForm'); if(f) f.style.display=(f.style.display==='none'?'block':'none');}
 function hydrateCompanyVagas(){
+  loadCatalog();
   var fb=document.getElementById('vagaFormBody');
-  if(fb) fb.innerHTML='<h3 style="margin-bottom:10px">Publicar nova vaga</h3><div class="formgrid">'
+  if(fb) fb.innerHTML='<h3 style="margin-bottom:10px">Publicar nova vaga</h3>'
+    +'<div class="modelo-bar"><label class="lbl" style="margin-bottom:0">⚡ Começar de um modelo</label>'
+      +'<select class="inp2" id="vgModelo" onchange="aplicarModeloVaga()"><option value="">Carregando modelos…</option></select></div>'
+    +'<div class="formgrid">'
     +'<div class="full"><label class="lbl">Título</label><input class="inp2" id="vgTitulo" placeholder="Ex: Desenvolvedor Frontend Sênior"></div>'
     +'<div><label class="lbl">Modalidade</label><select class="inp2" id="vgModal"><option value="remoto">Remoto</option><option value="hibrido">Híbrido</option><option value="presencial">Presencial</option></select></div>'
-    +'<div></div>'
+    +'<div><label class="lbl">Nível</label><select class="inp2" id="vgNivel"><option value="">Indiferente</option><option value="estagio">Estágio</option><option value="junior">Júnior</option><option value="pleno">Pleno</option><option value="senior">Sênior</option><option value="especialista">Especialista/Gestão</option></select></div>'
     +locSelectsHTML('vgEstado','vgCidade','','')
     +'<div><label class="lbl">Salário mín (R$)</label><input class="inp2" id="vgSalMin" type="number"></div>'
     +'<div><label class="lbl">Salário máx (R$)</label><input class="inp2" id="vgSalMax" type="number"></div>'
-    +'<div class="full"><label class="lbl">Skills desejadas <span class="muted">(separadas por vírgula — melhora o match)</span></label><input class="inp2" id="vgSkills" placeholder="Ex: React, TypeScript, Node"></div>'
+    +'<div class="full"><label class="lbl">Skills desejadas <span class="muted">(separadas por vírgula — melhora o match)</span></label><input class="inp2" id="vgSkills" list="dlSkills" autocomplete="off" placeholder="Ex: React, TypeScript, Node"></div>'
+    +'<div class="full" id="vgSkillHint"></div>'
     +'<div class="full"><label class="lbl">Descrição</label><textarea class="inp2" id="vgDesc" placeholder="Responsabilidades, requisitos, benefícios…"></textarea></div>'
     +'</div><div style="margin-top:12px;display:flex;gap:8px"><button class="btn primary" onclick="publicarVaga()">Publicar</button><button class="btn ghost" onclick="vagaFormToggle()">Cancelar</button></div>';
+  loadTemplates(fillVagaModelos);
   var b=document.getElementById('vagaAddBtn'); if(b) b.onclick=vagaFormToggle;
   reloadMyVagas();
+}
+function fillVagaModelos(){
+  var sel=document.getElementById('vgModelo'); if(!sel) return;
+  var opts='<option value="">Começar do zero</option>';
+  (vzTemplates||[]).forEach(function(t,i){ opts+='<option value="'+i+'">'+esc(t.titulo)+'</option>'; });
+  sel.innerHTML=opts;
+}
+function aplicarModeloVaga(){
+  var sel=document.getElementById('vgModelo'); if(!sel) return;
+  var idx=sel.value; if(idx===''||!vzTemplates||!vzTemplates[idx]) return;
+  var t=vzTemplates[idx];
+  setVal('vgTitulo',t.titulo||'');
+  if(t.modalidade) setVal('vgModal',t.modalidade);
+  if(t.nivel) setVal('vgNivel',t.nivel);
+  setVal('vgSkills',(t.skills||[]).join(', '));
+  setVal('vgDesc',t.descricao||'');
+  var hint=document.getElementById('vgSkillHint');
+  if(hint) hint.innerHTML='<div class="modelo-tip">✓ Modelo aplicado — ajuste os campos como quiser antes de publicar.</div>';
 }
 function reloadMyVagas(){
   api('/vagas?mine=1').then(function(list){var box=document.getElementById('myVagas'); if(!box) return;
@@ -1549,7 +1605,7 @@ function reloadMyVagas(){
 function publicarVaga(){
   var titulo=(val('vgTitulo')||'').trim(); if(!titulo){ alertMsg('Informe o título da vaga.'); return; }
   var skills=(val('vgSkills')||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
-  var body={titulo:titulo,modalidade:val('vgModal'),estado:val('vgEstado'),cidade:val('vgCidade'),salario_min:val('vgSalMin'),salario_max:val('vgSalMax'),descricao:val('vgDesc'),skills:skills,status:'ativa'};
+  var body={titulo:titulo,modalidade:val('vgModal'),nivel:val('vgNivel'),estado:val('vgEstado'),cidade:val('vgCidade'),salario_min:val('vgSalMin'),salario_max:val('vgSalMax'),descricao:val('vgDesc'),skills:skills,status:'ativa'};
   api('/vagas',{method:'POST',body:body}).then(function(){ vagaFormToggle(); alertMsg('Vaga publicada! ✓'); reloadMyVagas(); }).catch(function(e){ alertMsg(e.message); });
 }
 function deleteVaga(id){ if(!confirm('Remover esta vaga?')) return; api('/vagas/'+id,{method:'DELETE'}).then(function(){ alertMsg('Vaga removida.'); reloadMyVagas(); }).catch(function(e){ alertMsg(e.message); }); }
@@ -2101,7 +2157,7 @@ var PAGES_C={
  habilidades:function(){return page('Habilidades','Adicione e avalie suas competências técnicas e comportamentais.','<button class="btn primary" id="btnSaveSkills">Salvar habilidades</button>',
   '<div class="card" style="margin-bottom:18px"><div class="pad">'
     +'<h3 style="margin-bottom:2px">Hard Skills (técnicas)</h3><p class="muted" style="font-size:12.5px;margin-bottom:12px">Adicione a competência e dê uma nota de 0 a 10 para o seu domínio.</p>'
-    +'<div class="hs-add"><input id="hsNome" class="inp2" placeholder="Ex: React, Excel avançado, Photoshop…" onkeydown="if(event.key===\'Enter\'){event.preventDefault();skillAddHard();}">'
+    +'<div class="hs-add"><input id="hsNome" class="inp2" list="dlSkills" autocomplete="off" placeholder="Ex: React, Excel avançado, Photoshop…" onkeydown="if(event.key===\'Enter\'){event.preventDefault();skillAddHard();}">'
       +'<select id="hsNivel" class="inp2">'+[0,1,2,3,4,5,6,7,8,9,10].map(function(n){return '<option value="'+n+'"'+(n===7?' selected':'')+'>'+n+'/10</option>';}).join('')+'</select>'
       +'<button class="btn dark" onclick="skillAddHard()">+ Adicionar</button></div>'
     +'<div id="hardList" style="margin-top:14px"><p class="muted">Carregando…</p></div>'
