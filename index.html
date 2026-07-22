@@ -380,6 +380,7 @@
   .modal-back{display:none;position:fixed;inset:0;background:rgba(9,15,40,.5);z-index:60;padding:40px 16px;overflow:auto}
   .modal-back.show{display:flex;align-items:flex-start;justify-content:center}
   .modal{background:#fff;border-radius:16px;max-width:640px;width:100%;box-shadow:0 30px 80px rgba(0,0,0,.4)}
+  .modal>.pad,.modal .pad{padding:22px 24px}
   .menu-toggle{display:none;background:none;border:0;font-size:22px;cursor:pointer;color:var(--ink);padding:4px 8px;line-height:1}
   .backdrop{display:none;position:fixed;inset:0;background:rgba(9,15,40,.45);z-index:40}
   .backdrop.show{display:block}
@@ -493,6 +494,18 @@
   .rev-comment{border-left:3px solid var(--line-2);padding:4px 0 4px 12px;margin:12px 0}
   .rev-comment .who{font-size:12px;color:var(--muted);margin-bottom:3px}
   .rev-comment p{font-size:13.5px;color:var(--ink);margin:4px 0}
+
+  /* ---------- STATUS DO CANDIDATO ---------- */
+  .status-seg{display:flex;gap:8px;flex-wrap:wrap}
+  .status-seg button{border:1.5px solid var(--line-2);background:#fff;border-radius:12px;padding:10px 15px;font-weight:600;font-size:13px;color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;gap:9px;transition:transform .18s,box-shadow .18s,background .18s,color .18s,border-color .18s}
+  .status-seg button .dot{width:9px;height:9px;border-radius:50%;background:var(--muted-2);transition:.18s;box-shadow:0 0 0 0 rgba(34,197,139,.5)}
+  .status-seg button:hover{border-color:var(--lilac-soft)}
+  .status-seg button.on{border-color:transparent;color:#fff;transform:translateY(-1px);box-shadow:var(--shadow-md)}
+  .status-seg button.on .dot{background:#fff;animation:stPulse 1.8s ease-out infinite}
+  .status-seg button.on.s-trab{background:linear-gradient(120deg,#6B6483,#9A93AE)}
+  .status-seg button.on.s-aberto{background:var(--grad-gold)}
+  .status-seg button.on.s-disp{background:var(--grad-mint)}
+  @keyframes stPulse{0%{box-shadow:0 0 0 0 rgba(255,255,255,.6)}70%{box-shadow:0 0 0 7px rgba(255,255,255,0)}100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}}
 </style>
 </head>
 <body>
@@ -881,7 +894,7 @@ function renderOnboarding(){
 function obStepHTML_E(i){
   if(i===0){ return '<h3 style="margin-bottom:4px">1. Dados da empresa</h3><p class="muted" style="margin-bottom:14px">O CNPJ é único por empresa e não pode ser alterado depois de definido.</p><div class="formgrid">'
     +of('razao_social','Razão social')+of('nome_fantasia','Nome fantasia')
-    +(obState.data.cnpj?('<div><label class="lbl">CNPJ</label><input class="inp2" value="'+esc(obState.data.cnpj)+'" disabled></div>'):of('cnpj','CNPJ'))
+    +(obState.data.cnpj?('<div><label class="lbl">CNPJ</label><input class="inp2" value="'+esc(obState.data.cnpj)+'" disabled></div>'):('<div><label class="lbl">CNPJ</label><input class="inp2" id="ob_cnpj" inputmode="numeric" maxlength="18" placeholder="00.000.000/0001-00" value="'+esc(obState.data.cnpj||'')+'" oninput="maskCnpj(this)"></div>'))
     +of('segmento','Segmento / ramo')
     +osel('tamanho','Porte da empresa',['','1–10 funcionários','11–50 funcionários','51–200 funcionários','201–500 funcionários','501–1000 funcionários','Mais de 1000'])
     +of('ano_fundacao','Ano de fundação')
@@ -1089,7 +1102,7 @@ function renderSignupFields(){
      +'<div class="field"><label>Senha</label><div class="inp"><span class="ic">🔒</span><input id="suSenha" type="password" placeholder="mínimo 6 caracteres"></div></div>';
   } else {
     h='<div class="field"><label>Razão social</label><div class="inp"><span class="ic">🏢</span><input id="suNome" placeholder="Sua empresa Ltda"></div></div>'
-     +'<div class="field"><label>CNPJ</label><div class="inp"><span class="ic">🆔</span><input id="suCnpj" placeholder="00.000.000/0001-00"></div></div>'
+     +'<div class="field"><label>CNPJ</label><div class="inp"><span class="ic">🆔</span><input id="suCnpj" inputmode="numeric" maxlength="18" placeholder="00.000.000/0001-00" oninput="maskCnpj(this)"></div></div>'
      +'<div class="field"><label>Email corporativo</label><div class="inp"><span class="ic">✉</span><input id="suEmail" placeholder="rh@empresa.com.br"></div></div>'
      +'<div class="field"><label>Senha</label><div class="inp"><span class="ic">🔒</span><input id="suSenha" type="password" placeholder="mínimo 6 caracteres"></div></div>';
   }
@@ -1199,29 +1212,32 @@ function resendVerify(btn){
 }
 
 /* ---- Rodapé do app (links institucionais vindos do WordPress) ---- */
+/* ---- Máscara de CNPJ (##.###.###/####-##) ---- */
+function fmtCnpj(v){
+  var d=(''+(v||'')).replace(/\D/g,'').slice(0,14), o=d;
+  if(d.length>2) o=d.slice(0,2)+'.'+d.slice(2);
+  if(d.length>5) o=d.slice(0,2)+'.'+d.slice(2,5)+'.'+d.slice(5);
+  if(d.length>8) o=d.slice(0,2)+'.'+d.slice(2,5)+'.'+d.slice(5,8)+'/'+d.slice(8);
+  if(d.length>12) o=d.slice(0,2)+'.'+d.slice(2,5)+'.'+d.slice(5,8)+'/'+d.slice(8,12)+'-'+d.slice(12);
+  return o;
+}
+function maskCnpj(el){ if(!el) return; var s=el.selectionStart, before=el.value.length; el.value=fmtCnpj(el.value); }
+
 var vzFooterDone=false;
 function renderAppFooter(){
   var f=document.getElementById('appFooter'); if(!f||vzFooterDone) return;
   vzFooterDone=true;
+  var B='https://vezulo.com.br/';
   var brand='<div class="fbrand"><div class="brand"><div class="logo"></div><div><b>VEZULO</b></div></div>'
     +'<p>Conexões inteligentes entre empresas e talentos, com match por IA explicável.</p></div>';
   var ano=(new Date()).getFullYear();
   var bottom='<div class="fbottom"><span>© '+ano+' Vezulo. Todos os direitos reservados.</span><span>Feito no Brasil 🇧🇷</span></div>';
-  api('/links',{auth:false}).then(function(groups){
-    var cols=brand;
-    (groups||[]).forEach(function(g){
-      cols+='<div><h5>'+esc(g.grupo)+'</h5>'+(g.itens||[]).map(function(it){
-        return '<a href="'+esc(it.url)+'" target="_blank" rel="noopener">'+esc(it.titulo)+'</a>';
-      }).join('')+'</div>';
-    });
-    f.innerHTML='<div class="cols">'+cols+'</div>'+bottom;
-  }).catch(function(){
-    // Fallback estático se a API de links não responder.
-    f.innerHTML='<div class="cols">'+brand
-      +'<div><h5>Institucional</h5><a href="https://vezulo.com.br/sobre" target="_blank">Sobre</a><a href="https://vezulo.com.br/contato" target="_blank">Fale conosco</a></div>'
-      +'<div><h5>Legal</h5><a href="https://vezulo.com.br/termos" target="_blank">Termos de Uso</a><a href="https://vezulo.com.br/privacidade" target="_blank">Política de Privacidade</a></div>'
-      +'</div>'+bottom;
-  });
+  function col(titulo,itens){ return '<div><h5>'+titulo+'</h5>'+itens.map(function(it){ return '<a href="'+it[1]+'" target="_blank" rel="noopener">'+it[0]+'</a>'; }).join('')+'</div>'; }
+  f.innerHTML='<div class="cols">'+brand
+    +col('Institucional',[['Sobre',B+'sobre'],['Planos',B+'planos'],['Blog',B+'blog'],['Fale conosco',B+'contato']])
+    +col('Ajuda',[['Central de Ajuda',B+'ajuda'],['Contato',B+'contato']])
+    +col('Legal',[['Termos de Uso',B+'termos'],['Privacidade',B+'privacidade'],['Cookies',B+'cookies']])
+    +'</div>'+bottom;
 }
 function logout(){ VZ.token=null; VZ.user=null; go('login'); }
 function vzBoot(){
@@ -1940,7 +1956,8 @@ function renderTalent(t,i){
   var skills=(t.skills||[]);
   var tagH=skills.slice(0,3).map(function(s,j){ return '<span class="chip'+(!un&&j>0?' blur':'')+'">'+esc(s)+'</span>'; }).join('')
     +(t.disponivel?'<span class="chip mint">🟢 '+esc(t.disponivel)+'</span>':'');
-  var av=esc((t.nome||'?').substring(0,2).toUpperCase());
+  var ini=esc((t.nome||'?').substring(0,2).toUpperCase());
+  var av=avatarInner(t.avatar,ini);
   var nameH='<div class="t-name'+(un?'':' blur')+'">'+esc(t.nome)+'</div>';
   var cta = un
     ? '<div class="row" style="gap:8px"><button class="btn ghost sm" onclick="openTalento('+t.id+')">Ver currículo</button><button class="btn primary sm" onclick="msgUser('+t.id+')">Mensagem</button></div>'
@@ -1949,7 +1966,7 @@ function renderTalent(t,i){
         : '<span class="muted" style="font-size:12px">perfil incompleto</span>');
   return '<div class="talent">'
     +'<span class="lockbadge">'+badge+'</span>'
-    +'<div class="lockrow"><div class="avatar-lg" style="background:'+TAL_GRADS[(i||0)%4]+'" onclick="openTalento('+t.id+')">'+av+'</div>'
+    +'<div class="lockrow"><div class="avatar-lg'+(un?'':' blur')+'" style="background:'+TAL_GRADS[(i||0)%4]+';overflow:hidden" onclick="openTalento('+t.id+')">'+av+'</div>'
       +'<div>'+nameH+'<div class="t-sub">'+esc(t.cargo||'—')+(t.cidade?' · '+esc(t.cidade):'')+' · '+(t.completude||0)+'% perfil</div></div></div>'
     +'<div class="row" style="gap:6px;margin:14px 0;flex-wrap:wrap">'+tagH+'</div>'
     +'<div class="between" style="padding-top:12px;border-top:1px solid var(--line)">'
@@ -1994,7 +2011,7 @@ function openTalento(id){
       ? '<div style="padding:12px;background:var(--green-bg);border-radius:10px;font-size:13px">✓ ✉ '+esc(t.contato.email)+(t.contato.telefone?' · 📱 '+esc(t.contato.telefone)+'<a class="wa-btn" href="'+waHref(t.contato.telefone,t.nome)+'" target="_blank" rel="noopener">💬 WhatsApp</a>':'')+(t.contato.linkedin?' · '+esc(t.contato.linkedin):'')+'</div><div class="unlock"><button class="btn primary" style="flex:1" onclick="msgUser('+t.id+')">✉ Enviar mensagem</button></div>'
       : '<div class="unlock"><button class="btn dark" style="flex:1" onclick="desbloquearModal('+t.id+',this)">🔓 Desbloquear Perfil · 1 Vezu</button></div>'+(t.completude>=50?'':'<p class="muted" style="margin-top:8px">Perfil ainda incompleto para desbloqueio.</p>');
     openModal('<div class="pad">'
-      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><div style="display:flex;gap:14px;align-items:center"><div class="avatar'+(t.unlocked?'':' blur')+'" style="width:52px;height:52px;font-size:16px">'+esc((t.nome||'?').substring(0,2))+'</div><div><h2 style="font-size:20px">'+esc(t.nome)+'</h2><div class="muted">'+esc(t.cargo||'—')+(t.cidade?' · '+esc(t.cidade):'')+' · '+(t.completude||0)+'% perfil</div></div></div><button class="icobtn" onclick="closeModal()">✕</button></div>'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><div style="display:flex;gap:14px;align-items:center"><div class="avatar'+(t.unlocked?'':' blur')+'" style="width:52px;height:52px;font-size:16px;overflow:hidden">'+avatarInner(t.avatar,esc((t.nome||'?').substring(0,2)))+'</div><div><h2 style="font-size:20px">'+esc(t.nome)+'</h2><div class="muted">'+esc(t.cargo||'—')+(t.cidade?' · '+esc(t.cidade):'')+' · '+(t.completude||0)+'% perfil</div>'+(t.disponivel?'<div style="margin-top:5px"><span class="chip mint">🟢 '+esc(t.disponivel)+'</span></div>':'')+'</div></div><button class="icobtn" onclick="closeModal()">✕</button></div>'
       +'<div style="margin-top:10px"><button class="btn ghost" onclick="toggleFav('+t.id+',this)">'+(t.favorito?'★ Favoritado':'☆ Favoritar')+'</button></div>'
       +(t.resumo?'<p style="margin:14px 0;font-size:13.5px;color:#42506e;line-height:1.6">'+esc(t.resumo)+'</p>':'')
       +'<div style="margin:14px 0">'+cta+'</div>'
@@ -2136,6 +2153,17 @@ function hydrateCandidateDashboard(){
     box.innerHTML=list.slice(0,3).map(recCard).join('');
   }).catch(function(){});
 }
+function renderFunnel(m){
+  var box=document.getElementById('funnelBox'); if(!box) return;
+  var vagas=m.vagas_publicadas||0, views=m.visualizacoes||0, cand=m.candidatos||0, match=m.matches_ia||0;
+  var sub=document.getElementById('funnelSub'); if(sub) sub.textContent=vagas+' vaga'+(vagas===1?'':'s')+' publicada'+(vagas===1?'':'s');
+  if(!vagas){ box.innerHTML='<p class="muted" style="font-size:13px">Publique uma vaga para ver o funil real: visualizações, candidaturas e matches aparecem aqui conforme a atividade.</p>'; var cv0=document.getElementById('funnelConv'); if(cv0) cv0.textContent=''; return; }
+  var steps=[['#9D7BFF',vagas,'Vagas',''],['#5B3DEF',views,'Visualizações',''],['#4C2FBF',cand,'Candidaturas',''],['#22C58B',match,'Matches','≥ 80%']];
+  box.innerHTML=steps.map(function(s){ return '<div class="fstep" style="background:'+s[0]+'"><b>'+s[1]+'</b><span>'+s[2]+'</span>'+(s[3]?'<small>'+s[3]+'</small>':'')+'</div>'; }).join('');
+  var pct=function(a,b){ return b>0?Math.round(a/b*1000)/10:0; };
+  var cv=document.getElementById('funnelConv');
+  if(cv) cv.innerHTML=(views>0||cand>0)?('Conversão view→candidatura <b style="color:var(--ink)">'+(''+pct(cand,views)).replace('.',',')+'%</b> · candidatura→match <b style="color:var(--ink)">'+(''+pct(match,cand)).replace('.',',')+'%</b>'):'Ainda sem visualizações registradas.';
+}
 function hydrateCompanyDashboard(){
   api('/company/metrics').then(function(m){
     setTxt('keSaldo', m.saldo_vezus||0);
@@ -2145,6 +2173,7 @@ function hydrateCompanyDashboard(){
     setTxt('ringSaldoNum', m.saldo_vezus||0);
     var ring=document.getElementById('ringSaldo'); if(ring) ring.style.setProperty('--p', Math.min(100,(m.saldo_vezus||0)));
     if(m.contratacoes_mes) drawBar(m.contratacoes_mes.map(function(d){return [mesShort(d.mes), d.valor];}));
+    renderFunnel(m);
     var fb=document.getElementById('feedBox');
     if(fb) fb.innerHTML=(m.feed&&m.feed.length)?m.feed.map(function(f){return feed('i-blue','◔',feedLabel(f.type),(f.created_at||''));}).join(''):'<p class="muted">Sem atividades ainda. Publique vagas e busque talentos para começar.</p>';
   }).catch(function(){});
@@ -2154,18 +2183,30 @@ function hydrateCompanyDashboard(){
     dt.innerHTML=list.slice(0,2).map(renderTalent).join('');
   }).catch(function(){ dt.innerHTML=''; });
 }
+var STATUS_OPTS=[['Disponível','s-disp'],['Aberto a oportunidades','s-aberto'],['Trabalhando','s-trab']];
+var vzStatusSel='';
+function renderStatusSeg(){
+  var el=document.getElementById('statusSeg'); if(!el) return;
+  el.innerHTML=STATUS_OPTS.map(function(o){ var on=vzStatusSel===o[0];
+    return '<button type="button" class="'+o[1]+(on?' on':'')+'" onclick="setStatus('+JSON.stringify(o[0]).replace(/"/g,'&quot;')+')"><span class="dot"></span>'+esc(o[0])+'</button>';
+  }).join('');
+}
+function setStatus(v){ vzStatusSel=(vzStatusSel===v?'':v); renderStatusSeg(); }
 function hydrateCandidateProfile(){
   var u=VZ.user||{}; setVal('pEmail', u.email);
+  vzStatusSel=''; renderStatusSeg();
   api('/candidate/profile').then(function(p){
     setVal('pNome',p.nome); setVal('pCargo',p.cargo_desejado); setVal('pTel',p.telefone);
     setVal('pEstado',p.estado||''); locInit('pEstado','pCidade',p.estado,p.cidade);
     setVal('pLinkedin',p.linkedin); setVal('pResumo',p.resumo);
+    vzStatusSel=p.disponibilidade||''; renderStatusSeg();
   }).catch(function(){});
   var btn=document.getElementById('btnSaveProfile');
   if(btn) btn.onclick=function(){
     api('/candidate/profile',{method:'PUT',body:{
       nome:val('pNome'),cargo_desejado:val('pCargo'),telefone:val('pTel'),
-      estado:val('pEstado'),cidade:val('pCidade'),linkedin:val('pLinkedin'),resumo:val('pResumo')
+      estado:val('pEstado'),cidade:val('pCidade'),linkedin:val('pLinkedin'),resumo:val('pResumo'),
+      disponibilidade:vzStatusSel
     }}).then(function(p){
       var u=VZ.user; if(u){u.nome=val('pNome'); VZ.user=u; document.getElementById('whoName').textContent=u.nome;}
       alertMsg('Perfil salvo! ✓ Completude: '+(p.completude||0)+'%');
@@ -2227,7 +2268,8 @@ var PAGES_C={
   +'</div></div>';},
 
  perfil:function(){return page('Meu Perfil','Gerencie suas informações pessoais e profissionais.','<button class="btn primary" id="btnSaveProfile">Salvar Alterações</button>',
-  '<div class="card"><div class="pad">'
+  '<div class="card" style="margin-bottom:16px"><div class="pad"><h3 style="margin-bottom:2px">Seu status</h3><p class="muted" style="font-size:12.5px;margin-bottom:12px">Aparece para as empresas quando elas desbloqueiam seu perfil. Toque para ativar ou desativar.</p><div class="status-seg" id="statusSeg"></div></div></div>'
+  +'<div class="card"><div class="pad">'
   +'<div style="display:flex;gap:16px;align-items:center;margin-bottom:22px"><div class="avatar" style="width:64px;height:64px;font-size:20px" id="avatarProfile">'+avatarInner((VZ.user&&VZ.user.avatar),(((VZ.user&&VZ.user.nome)||'V').trim()[0]||'V').toUpperCase())+'</div><button class="btn ghost" onclick="pickAvatar()">Alterar Foto</button></div>'
   +'<div class="formgrid">'
    +fldI('pNome','Nome Completo')+fldI('pCargo','Cargo Desejado')
@@ -2294,14 +2336,14 @@ var PAGES_E={
   +'</div>'
   +'<div class="cols" style="margin-top:16px"><div class="stack">'
    +'<div class="card"><div class="pad"><div class="sec-h"><h3>Contratações por Mês</h3><span class="muted">Ritmo de crescimento do time</span></div><div id="barChart"></div></div></div>'
-   +'<div class="card"><div class="pad"><div class="sec-h"><h3>Funil da vaga · Desenvolvedor Frontend Sênior</h3><span class="statuspill st-ativa">Ativa</span></div>'
-     +'<div class="funnel"><div class="fstep" style="background:#9D7BFF"><b>342</b><span>Views</span></div><div class="fstep" style="background:#5B3DEF"><b>45</b><span>Interessados</span></div><div class="fstep" style="background:#4C2FBF"><b>28</b><span>Candidaturas</span></div><div class="fstep" style="background:#22C58B"><b>12</b><span>Matches</span><small>≥ 80%</small></div><div class="fstep" style="background:#178a5f"><b>2</b><span>Contratações</span></div></div>'
-     +'<p class="muted" style="margin-top:12px">Conversão view→candidatura <b style="color:var(--ink)">8,2%</b> · candidatura→contratação <b style="color:var(--ink)">7,1%</b></p></div></div>'
+   +'<div class="card"><div class="pad"><div class="sec-h"><h3>Funil das suas vagas</h3><span class="muted" id="funnelSub">agregado das vagas publicadas</span></div>'
+     +'<div class="funnel" id="funnelBox"><p class="muted">Carregando…</p></div>'
+     +'<p class="muted" id="funnelConv" style="margin-top:12px"></p></div></div>'
    +'<div class="card"><div class="pad"><div class="card-h"><h3>Talentos em destaque</h3><span class="more" onclick="navTo(\'buscar\')">Buscar talentos</span></div>'
      +'<div id="dashTalents" class="grid" style="grid-template-columns:1fr 1fr"><p class="muted">Carregando…</p></div>'
    +'</div></div>'
   +'</div><div class="stack">'
-   +'<div class="card"><div class="pad"><h3 style="margin-bottom:6px">ROI dos Vezus</h3><p class="muted" style="margin-bottom:4px">O que o Indeed não mostra com clareza</p><div class="roi"><div><b>16</b><span>Vezus / contratação</span></div><div><b>12,5%</b><span>desbloqueio → contrat.</span></div><div><b>R$ 80</b><span>custo / contratação</span></div></div></div></div>'
+   +'<div class="card"><div class="pad"><h3 style="margin-bottom:6px">ROI dos Vezus</h3><p class="muted" style="margin-bottom:4px">O que outros sites não mostram com clareza</p><div class="roi"><div><b>16</b><span>Vezus / contratação</span></div><div><b>12,5%</b><span>desbloqueio → contrat.</span></div><div><b>R$ 80</b><span>custo / contratação</span></div></div></div></div>'
    +'<div class="card"><div class="pad"><h3 style="margin-bottom:6px">Saldo de Vezus</h3><div style="display:flex;align-items:center;gap:14px;margin:8px 0 4px"><div class="ring" id="ringSaldo" style="--p:50;--c:var(--orange)"><div class="hole"><b id="ringSaldoNum">—</b><span>Vezus</span></div></div><div class="muted" id="saldoDesc">Consumo mensal registrado em tempo real.</div></div><button class="btn orange block" style="margin-top:8px" onclick="navTo(\'financeiro\')">Comprar pacote Growth</button></div></div>'
    +'<div class="card"><div class="pad"><h3 style="margin-bottom:8px">Feed de Atividades</h3><div id="feedBox"><p class="muted">Sem atividades ainda.</p></div></div></div>'
   +'</div></div></div>';},
