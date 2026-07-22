@@ -440,6 +440,31 @@
   .pay-ok .ic{width:60px;height:60px;border-radius:50%;background:var(--grad-mint,linear-gradient(135deg,#22C58B,#8ee6bf));color:#fff;display:grid;place-items:center;font-size:30px;margin:0 auto 12px}
   .wa-btn{display:inline-flex;align-items:center;gap:5px;background:#25D366;color:#fff;font-weight:700;font-size:12px;padding:6px 11px;border-radius:8px;text-decoration:none;margin-left:8px;vertical-align:middle;white-space:nowrap}
   .wa-btn:hover{background:#1ebe5b;color:#fff}
+
+  /* ---------- TOUR DE ONBOARDING (primeira vez) ---------- */
+  .ob-back{position:fixed;inset:0;z-index:1200;background:rgba(26,16,48,.55);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;padding:20px;opacity:0;transition:opacity .28s}
+  .ob-back.show{display:flex;opacity:1}
+  .ob-card{width:100%;max-width:440px;background:var(--card);border-radius:var(--r-lg);box-shadow:var(--shadow-lg);overflow:hidden;transform:translateY(14px) scale(.98);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
+  .ob-back.show .ob-card{transform:none}
+  .ob-hero{position:relative;padding:30px 28px 24px;color:#fff;background:var(--grad);overflow:hidden}
+  .ob-hero.mint{background:var(--grad-mint)}
+  .ob-hero.gold{background:var(--grad-gold)}
+  .ob-hero::after{content:"";position:absolute;right:-40px;top:-40px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.12)}
+  .ob-skip{position:absolute;top:14px;right:16px;z-index:2;background:rgba(255,255,255,.18);border:0;color:#fff;font-size:12.5px;font-weight:600;padding:6px 12px;border-radius:20px;cursor:pointer;transition:.18s}
+  .ob-skip:hover{background:rgba(255,255,255,.3)}
+  .ob-emoji{font-size:40px;line-height:1;margin-bottom:14px;position:relative;z-index:1;display:block;animation:obPop .45s cubic-bezier(.2,1.4,.4,1)}
+  @keyframes obPop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+  .ob-hero h3{font-size:21px;position:relative;z-index:1;letter-spacing:-.02em}
+  .ob-body{padding:22px 28px 8px;font-size:14.5px;line-height:1.6;color:var(--ink);min-height:96px}
+  .ob-body b{color:var(--blue)}
+  .ob-body .vchip{display:inline-flex;align-items:center;gap:5px;background:var(--blue-soft);color:var(--blue);font-weight:700;border-radius:8px;padding:1px 7px;font-size:13px}
+  .ob-body .vchip .v{width:16px;height:16px;border-radius:50%;background:var(--grad);color:#fff;display:inline-grid;place-items:center;font-size:10px;font-weight:800}
+  .ob-dots{display:flex;gap:7px;justify-content:center;padding:6px 0 2px}
+  .ob-dots i{width:7px;height:7px;border-radius:50%;background:var(--line-2);transition:.25s}
+  .ob-dots i.on{width:22px;border-radius:5px;background:var(--grad)}
+  .ob-foot{display:flex;align-items:center;gap:10px;padding:14px 24px 22px}
+  .ob-foot .sp{flex:1}
+  .ob-back .btn{font-size:13.5px}
 </style>
 </head>
 <body>
@@ -606,6 +631,7 @@
   </aside>
   <div class="backdrop" id="backdrop" onclick="toggleSide(false)"></div>
   <div class="modal-back" id="modalBack" onclick="closeModal(event)"><div class="modal" id="modalBody"></div></div>
+  <div class="ob-back" id="obTour"><div class="ob-card" id="obCard"></div></div>
   <input type="file" id="avatarInput" accept="image/png,image/jpeg,image/webp" style="display:none" onchange="onAvatarPicked(event)">
   <div class="main">
     <div class="top">
@@ -1063,7 +1089,68 @@ function enterApp(role){
   document.getElementById('whoRole').textContent = role==='E'?'Empresa':'Candidato';
   if(role==='E'){ api('/vezus/balance').then(function(b){ var p=document.getElementById('vezusPill'); if(p&&b){ p.innerHTML='<span class="v">V</span> <b>'+b.saldo+'</b>'; } }).catch(function(){}); }
   buildNav(); renderPage(); renderAppFooter(); refreshVerifyBanner(); go('app');
+  vzTourMaybe(role);
 }
+
+/* ============ TOUR DE ONBOARDING (primeira vez) ============ */
+var VZ_TOUR_V='1';
+var obTour={role:'C',i:0,slides:[]};
+function vzTourSlides(role){
+  if(role==='E'){
+    return [
+      {theme:'',emoji:'👋',h:'Bem-vindo à Vezulo',html:'Aqui você encontra talentos com <b>match por IA explicável</b> — nada de peneirar currículo no escuro. Em 4 passos rápidos, veja como aproveitar tudo.'},
+      {theme:'',emoji:'⌕',h:'Busque de graça',html:'Navegue o ranking de candidatos compatíveis <b>sem gastar nada</b>. Cada perfil mostra a nota por dimensão: skills, senioridade, localização e salário. Você decide com contexto.'},
+      {theme:'mint',emoji:'🟣',h:'O que é um Vezu',html:'O <span class="vchip"><span class="v">V</span>Vezu</span> é o crédito que <b>desbloqueia o contato</b> de um candidato — você só gasta com quem realmente interessa. Sua conta já tem <b>5 Vezus grátis</b> pra testar.'},
+      {theme:'gold',emoji:'✦',h:'Publique e acompanhe',html:'Crie vagas em minutos e receba candidaturas com match. No <b>dashboard</b> você acompanha visualizações, candidatos e o retorno de cada processo.',cta:'Buscar talentos',go:'buscar'}
+    ];
+  }
+  return [
+    {theme:'',emoji:'👋',h:'Bem-vindo à Vezulo',html:'Aqui as empresas te encontram pelo <b>match</b>, não pela sorte. Em 4 passos rápidos, veja como se destacar.'},
+    {theme:'',emoji:'◎',h:'Complete seu perfil',html:'Quanto mais completo, <b>melhor o seu match</b>. Perfil, experiências e formação — cada seção preenchida aumenta suas chances de aparecer para as empresas certas.'},
+    {theme:'mint',emoji:'◈',h:'Avalie suas habilidades',html:'Dê uma nota de <b>0 a 10</b> para cada skill, com honestidade. É isso que alimenta o match explicável e mostra onde você brilha.'},
+    {theme:'gold',emoji:'✨',h:'Seja encontrado',html:'Empresas compatíveis veem seu perfil e podem desbloquear o contato. Você acompanha quem se interessou direto no <b>dashboard</b>.',cta:'Completar meu perfil',go:'perfil'}
+  ];
+}
+function vzTourMaybe(role){
+  var done; try{ done=localStorage.getItem('vz_tour_v'+VZ_TOUR_V); }catch(e){ done='1'; }
+  if(done) return;
+  obTour.role=(role==='E')?'E':'C';
+  obTour.slides=vzTourSlides(obTour.role);
+  obTour.i=0;
+  setTimeout(function(){
+    var back=document.getElementById('obTour'); if(!back) return;
+    obTourRender();
+    back.classList.add('show');
+  },520);
+}
+function vzTourDone(){
+  try{ localStorage.setItem('vz_tour_v'+VZ_TOUR_V,'1'); }catch(e){}
+  var back=document.getElementById('obTour'); if(back) back.classList.remove('show');
+}
+function obTourRender(){
+  var s=obTour.slides[obTour.i], n=obTour.slides.length, card=document.getElementById('obCard'); if(!card||!s) return;
+  var dots=''; for(var d=0;d<n;d++){ dots+='<i class="'+(d===obTour.i?'on':'')+'"></i>'; }
+  var last=(obTour.i===n-1);
+  var back = obTour.i>0 ? '<button class="btn ghost" onclick="obTourNav(-1)">Voltar</button>' : '';
+  var nextLabel = last ? (s.cta||'Começar') : 'Próximo';
+  var nextAct = last ? (s.go?('obTourGo(\''+s.go+'\')'):'vzTourDone()') : 'obTourNav(1)';
+  card.innerHTML=''
+    +'<div class="ob-hero '+(s.theme||'')+'">'
+    +  '<button class="ob-skip" onclick="vzTourDone()">Pular</button>'
+    +  '<span class="ob-emoji">'+s.emoji+'</span>'
+    +  '<h3>'+s.h+'</h3>'
+    +'</div>'
+    +'<div class="ob-body">'+s.html+'</div>'
+    +'<div class="ob-dots">'+dots+'</div>'
+    +'<div class="ob-foot">'+back+'<span class="sp"></span>'
+    +  '<button class="btn primary" onclick="'+nextAct+'">'+nextLabel+' →</button>'
+    +'</div>';
+}
+function obTourNav(dir){
+  obTour.i=Math.max(0,Math.min(obTour.slides.length-1,obTour.i+dir));
+  obTourRender();
+}
+function obTourGo(page){ vzTourDone(); if(typeof navTo==='function') navTo(page); }
 
 /* ---- Banner "confirme seu e-mail" ---- */
 function refreshVerifyBanner(){
