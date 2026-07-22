@@ -823,7 +823,7 @@ var OB_SCALARS=['nome','cpf','nacionalidade','data_nascimento','telefone','cidad
   'cargo_desejado','resumo','linkedin','portfolio','instagram','facebook','jornada','contrato','nivel_min','nivel_max','salario_min','salario_max',
   'veiculo','disp_viajar','disp_mudar','identidade_genero','orientacao','cor_raca'];
 var OB_TITLES_E=['Dados da empresa','Contato e presença','Sobre e responsável'];
-var OB_SCALARS_E=['razao_social','nome_fantasia','cnpj','segmento','tamanho','ano_fundacao',
+var OB_SCALARS_E=['razao_social','nome_fantasia','cnpj','segmento','ramo','tamanho','ano_fundacao',
   'cidade','estado','telefone','website','linkedin','instagram','facebook',
   'descricao','responsavel_nome','responsavel_cargo'];
 var CONHEC=['Banco de dados','Programação','Gráficos/Web','Aplicações de Escritório','Sistemas Operacionais','Outros programas'];
@@ -890,12 +890,16 @@ function renderOnboarding(){
   document.getElementById('obNext').textContent=(obState.step===T.length-1)?'Concluir ✓':'Próximo →';
   // Carrega a cidade salva se o passo tiver os selects de localidade.
   if(document.getElementById('ob_estado')){ locInit('ob_estado','ob_cidade',obState.data.estado,obState.data.cidade); }
+  // Preenche o ramo assim que a lista carregar.
+  if(document.getElementById('ob_ramo')){ loadRamos(function(){ var s=document.getElementById('ob_ramo'); if(s) s.innerHTML=ramoOptions(obState.data.ramo); }); }
 }
 function obStepHTML_E(i){
-  if(i===0){ return '<h3 style="margin-bottom:4px">1. Dados da empresa</h3><p class="muted" style="margin-bottom:14px">O CNPJ é único por empresa e não pode ser alterado depois de definido.</p><div class="formgrid">'
+  if(i===0){ return '<h3 style="margin-bottom:4px">1. Dados da empresa</h3><p class="muted" style="margin-bottom:14px">Comece pelo CNPJ — a gente puxa os dados públicos da Receita pra você. O CNPJ é único e não muda depois.</p><div class="formgrid">'
+    +(obState.data.cnpj
+        ? '<div class="full"><label class="lbl">CNPJ</label><input class="inp2" value="'+esc(obState.data.cnpj)+'" disabled></div>'
+        : '<div class="full"><label class="lbl">CNPJ</label><input class="inp2" id="ob_cnpj" inputmode="numeric" maxlength="18" placeholder="00.000.000/0001-00" value="'+esc(obState.data.cnpj||'')+'" oninput="maskCnpj(this);obCnpjAuto(this)"><div class="muted" id="obCnpjHint" style="font-size:12px;margin-top:5px"></div></div>')
     +of('razao_social','Razão social')+of('nome_fantasia','Nome fantasia')
-    +(obState.data.cnpj?('<div><label class="lbl">CNPJ</label><input class="inp2" value="'+esc(obState.data.cnpj)+'" disabled></div>'):('<div><label class="lbl">CNPJ</label><input class="inp2" id="ob_cnpj" inputmode="numeric" maxlength="18" placeholder="00.000.000/0001-00" value="'+esc(obState.data.cnpj||'')+'" oninput="maskCnpj(this)"></div>'))
-    +of('segmento','Segmento / ramo')
+    +'<div><label class="lbl">Ramo de atuação</label><select class="inp2" id="ob_ramo">'+ramoOptions(obState.data.ramo)+'</select></div>'
     +osel('tamanho','Porte da empresa',['','1–10 funcionários','11–50 funcionários','51–200 funcionários','201–500 funcionários','501–1000 funcionários','Mais de 1000'])
     +of('ano_fundacao','Ano de fundação')
     +'</div>'; }
@@ -1222,6 +1226,23 @@ function fmtCnpj(v){
   return o;
 }
 function maskCnpj(el){ if(!el) return; var s=el.selectionStart, before=el.value.length; el.value=fmtCnpj(el.value); }
+/* Autopreenche o cadastro da empresa com dados públicos da Receita (BrasilAPI). */
+var obCnpjLast='';
+function obCnpjAuto(el){
+  var d=(el&&el.value||'').replace(/\D/g,'');
+  var hint=document.getElementById('obCnpjHint');
+  if(d.length!==14){ if(hint&&d.length<14) hint.textContent=''; obCnpjLast=''; return; }
+  if(d===obCnpjLast) return; obCnpjLast=d;
+  if(hint){ hint.textContent='Buscando dados na Receita…'; hint.style.color='var(--muted)'; }
+  api('/cnpj/'+d,{auth:false}).then(function(r){
+    if(r.razao_social){ obState.data.razao_social=r.razao_social; var e1=document.getElementById('ob_razao_social'); if(e1) e1.value=r.razao_social; }
+    if(r.nome_fantasia){ obState.data.nome_fantasia=r.nome_fantasia; var e2=document.getElementById('ob_nome_fantasia'); if(e2) e2.value=r.nome_fantasia; }
+    if(r.ramo){ obState.data.ramo=r.ramo; var e3=document.getElementById('ob_ramo'); if(e3){ e3.innerHTML=ramoOptions(r.ramo); e3.value=r.ramo; } }
+    if(r.cidade){ obState.data.cidade=r.cidade; }
+    if(r.estado){ obState.data.estado=r.estado; }
+    if(hint){ hint.textContent='✓ Preenchido pela Receita — confira e ajuste se precisar.'; hint.style.color='var(--green-2)'; }
+  }).catch(function(e){ if(hint){ hint.textContent=(e&&e.message)||'Não foi possível consultar o CNPJ agora.'; hint.style.color='var(--muted)'; } });
+}
 
 var vzFooterDone=false;
 function renderAppFooter(){
@@ -1242,6 +1263,7 @@ function renderAppFooter(){
 function logout(){ VZ.token=null; VZ.user=null; go('login'); }
 function vzBoot(){
   renderSignupFields();
+  loadRamos();
   api('/oauth/status',{auth:false}).then(function(s){ vzOAuth=s; applyOAuthVisibility(); }).catch(function(){ vzOAuth={google:false,linkedin:false}; applyOAuthVisibility(); });
   if(handleEmailLinks()) return;   // ?reset= abre a tela de redefinição
   if(handleOAuthCallback()) return;
@@ -1394,20 +1416,28 @@ var SOFT_SUGERIDAS=['Comunicação','Trabalho em equipe','Liderança','Proativid
 var vzSkills={hard:[],soft:[]};
 
 /* ---- Catálogo (taxonomia de skills + modelos de vaga) ---- */
-var vzCatalog=null, vzTemplates=null;
-function loadCatalog(cb){
-  if(vzCatalog){ if(cb) cb(); return; }
-  api('/catalogo/skills',{auth:false}).then(function(d){
-    vzCatalog=d||{grupos:[],flat:[],soft:[]};
+var vzCatalog=null, vzTemplates=null, vzCatalogRamo=null, vzTemplatesRamo=null, vzRamos=null;
+function loadCatalog(cb,ramo){
+  ramo=ramo||'';
+  if(vzCatalog&&vzCatalogRamo===ramo){ if(cb) cb(); return; }
+  api('/catalogo/skills'+(ramo?('?ramo='+encodeURIComponent(ramo)):''),{auth:false}).then(function(d){
+    vzCatalog=d||{grupos:[],flat:[],soft:[]}; vzCatalogRamo=ramo;
     fillSkillDatalist();
     if(cb) cb();
-  }).catch(function(){ vzCatalog={grupos:[],flat:[],soft:[]}; if(cb) cb(); });
+  }).catch(function(){ vzCatalog={grupos:[],flat:[],soft:[]}; vzCatalogRamo=ramo; if(cb) cb(); });
 }
-function loadTemplates(cb){
-  if(vzTemplates){ if(cb) cb(); return; }
-  api('/catalogo/modelos-vaga',{auth:false}).then(function(list){ vzTemplates=list||[]; if(cb) cb(); })
-    .catch(function(){ vzTemplates=[]; if(cb) cb(); });
+function loadTemplates(cb,ramo){
+  ramo=ramo||'';
+  if(vzTemplates&&vzTemplatesRamo===ramo){ if(cb) cb(); return; }
+  api('/catalogo/modelos-vaga'+(ramo?('?ramo='+encodeURIComponent(ramo)):''),{auth:false}).then(function(list){ vzTemplates=list||[]; vzTemplatesRamo=ramo; if(cb) cb(); })
+    .catch(function(){ vzTemplates=[]; vzTemplatesRamo=ramo; if(cb) cb(); });
 }
+function loadRamos(cb){
+  if(vzRamos){ if(cb) cb(); return; }
+  api('/catalogo/ramos',{auth:false}).then(function(list){ vzRamos=list||[]; if(cb) cb(); })
+    .catch(function(){ vzRamos=[]; if(cb) cb(); });
+}
+function ramoOptions(sel){ return '<option value="">Selecione o ramo…</option>'+(vzRamos||[]).map(function(r){ return '<option value="'+esc(r.slug)+'"'+(sel===r.slug?' selected':'')+'>'+esc(r.label)+'</option>'; }).join(''); }
 function fillSkillDatalist(){
   var dl=document.getElementById('dlSkills'); if(!dl||!vzCatalog) return;
   var flat=vzCatalog.flat||[];
@@ -1661,7 +1691,9 @@ function candidatar(id,btn){
 /* ---- Vagas: empresa ---- */
 function vagaFormToggle(){var f=document.getElementById('vagaForm'); if(f) f.style.display=(f.style.display==='none'?'block':'none');}
 function hydrateCompanyVagas(){
-  loadCatalog();
+  // Carrega skills e modelos coerentes com o ramo da empresa (padeiro ≠ dev).
+  api('/company/profile').then(function(p){ var ramo=(p&&p.ramo)||''; loadCatalog(null,ramo); loadTemplates(fillVagaModelos,ramo); })
+    .catch(function(){ loadCatalog(); loadTemplates(fillVagaModelos); });
   var fb=document.getElementById('vagaFormBody');
   if(fb) fb.innerHTML='<h3 style="margin-bottom:10px">Publicar nova vaga</h3>'
     +'<div class="modelo-bar"><label class="lbl" style="margin-bottom:0">⚡ Começar de um modelo</label>'
@@ -1677,7 +1709,6 @@ function hydrateCompanyVagas(){
     +'<div class="full" id="vgSkillHint"></div>'
     +'<div class="full"><label class="lbl">Descrição</label><textarea class="inp2" id="vgDesc" placeholder="Responsabilidades, requisitos, benefícios…"></textarea></div>'
     +'</div><div style="margin-top:12px;display:flex;gap:8px"><button class="btn primary" onclick="publicarVaga()">Publicar</button><button class="btn ghost" onclick="vagaFormToggle()">Cancelar</button></div>';
-  loadTemplates(fillVagaModelos);
   var b=document.getElementById('vagaAddBtn'); if(b) b.onclick=vagaFormToggle;
   reloadMyVagas();
 }
@@ -2214,17 +2245,20 @@ function hydrateCandidateProfile(){
   };
 }
 function hydrateCompanyProfile(){
+  loadRamos(function(){ var s=document.getElementById('cRamo'); if(s&&!s.value){ s.innerHTML=ramoOptions(cRamoSel); s.value=cRamoSel; } });
+  var cRamoSel='';
   api('/company/profile').then(function(p){
     setVal('cRazao',p.razao_social); setVal('cCnpj',p.cnpj); setVal('cSegmento',p.segmento);
     setVal('cTamanho',p.tamanho); setVal('cWebsite',p.website); setVal('cLinkedin',p.linkedin);
     setVal('cEstado',p.estado||''); locInit('cEstado','cCidade',p.estado,p.cidade);
+    cRamoSel=p.ramo||''; var s=document.getElementById('cRamo'); if(s){ s.innerHTML=ramoOptions(cRamoSel); s.value=cRamoSel; }
   }).catch(function(){});
   var cid=(VZ.user&&VZ.user.id)||0;
   if(cid) api('/empresa/'+cid+'/avaliacoes',{auth:false}).then(function(rep){ renderReputacao(document.getElementById('repBox'),rep); }).catch(function(){ renderReputacao(document.getElementById('repBox'),null); });
   var btn=document.getElementById('btnSaveProfile');
   if(btn) btn.onclick=function(){
     api('/company/profile',{method:'PUT',body:{
-      razao_social:val('cRazao'),segmento:val('cSegmento'),tamanho:val('cTamanho'),
+      razao_social:val('cRazao'),segmento:val('cSegmento'),ramo:val('cRamo'),tamanho:val('cTamanho'),
       estado:val('cEstado'),cidade:val('cCidade'),website:val('cWebsite'),linkedin:val('cLinkedin')
     }}).then(function(p){
       var u=VZ.user; if(u){u.nome=val('cRazao'); VZ.user=u; document.getElementById('whoName').textContent=u.nome;}
@@ -2385,7 +2419,8 @@ var PAGES_E={
   +'<div style="display:flex;gap:16px;align-items:center;margin-bottom:8px"><div class="avatar" style="width:64px;height:64px;font-size:20px;border-radius:14px" id="avatarProfile">'+avatarInner((VZ.user&&VZ.user.avatar),(((VZ.user&&VZ.user.nome)||'V').trim()[0]||'V').toUpperCase())+'</div><div><h2 style="font-size:20px">'+esc((VZ.user&&VZ.user.nome)||'Sua empresa')+'</h2><div class="muted">Complete o perfil para os candidatos te encontrarem.</div></div><button class="btn ghost" style="margin-left:auto" onclick="pickAvatar()">Alterar Logo</button></div>'
   +'<div class="formgrid" style="margin-top:18px">'
    +fldI('cRazao','Razão Social')+fldIRO('cCnpj','CNPJ')
-   +fldI('cSegmento','Segmento')+fldI('cTamanho','Tamanho da Empresa')
+   +'<div><label class="lbl">Ramo de atuação</label><select class="inp2" id="cRamo"><option value="">Selecione…</option></select></div>'
+   +fldI('cSegmento','Segmento (detalhe)')+fldI('cTamanho','Tamanho da Empresa')
    +locSelectsHTML('cEstado','cCidade','','')
    +fldI('cWebsite','Website')+fldI('cLinkedin','LinkedIn')
   +'</div></div></div>'
