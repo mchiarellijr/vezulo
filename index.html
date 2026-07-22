@@ -471,6 +471,28 @@
   .modelo-bar .lbl{white-space:nowrap;font-weight:700;color:var(--blue)}
   .modelo-bar select{flex:1;min-width:200px}
   .modelo-tip{font-size:12.5px;color:var(--green-2);background:var(--green-bg);border-radius:8px;padding:8px 12px;font-weight:600}
+
+  /* ---------- REPUTAÇÃO / AVALIAÇÕES ---------- */
+  .stars{color:#E0A23C;letter-spacing:1px;font-size:14px;white-space:nowrap}
+  .stars.big{font-size:26px}
+  .rating-inline{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)}
+  .rating-inline b{color:var(--ink)}
+  .rev-stars{display:flex;gap:4px;justify-content:center;margin:6px 0 4px}
+  .rev-stars button{background:none;border:0;font-size:34px;line-height:1;color:var(--line-2);cursor:pointer;padding:0 2px;transition:.12s}
+  .rev-stars button.on{color:#E0A23C}
+  .rev-stars button:hover{transform:scale(1.12)}
+  .rev-aspects{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 2px}
+  .rep-head{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+  .rep-score{text-align:center;min-width:96px}
+  .rep-score .n{font-family:'Sora','Inter',sans-serif;font-size:38px;font-weight:700;line-height:1;color:var(--ink)}
+  .rep-dist{flex:1;min-width:200px;display:flex;flex-direction:column;gap:5px}
+  .rep-row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+  .rep-row .lb{width:34px;white-space:nowrap}
+  .rep-bar{flex:1;height:8px;border-radius:5px;background:var(--line);overflow:hidden}
+  .rep-bar i{display:block;height:100%;background:var(--grad-gold);border-radius:5px}
+  .rev-comment{border-left:3px solid var(--line-2);padding:4px 0 4px 12px;margin:12px 0}
+  .rev-comment .who{font-size:12px;color:var(--muted);margin-bottom:3px}
+  .rev-comment p{font-size:13.5px;color:var(--ink);margin:4px 0}
 </style>
 </head>
 <body>
@@ -1421,9 +1443,77 @@ function hydrateInteressadas(){
     box.innerHTML=list.map(function(c){
       var meta=[c.segmento,c.cidade].filter(Boolean).map(esc).join(' · ')||'—';
       var av=esc((c.nome||'E').substring(0,2)).toUpperCase();
-      return '<div class="listcard"><div class="li">'+av+'</div><div><h4>'+esc(c.nome)+'</h4><div class="meta">'+meta+' · visualizou seu perfil</div></div><div class="actions"><button class="btn dark" onclick="msgUser('+c.id+')">✉ Enviar mensagem</button></div></div>';
+      var rt=(c.rating&&c.rating.total)?('<span class="rating-inline" title="Reputação da empresa">'+starsHtml(c.rating.media)+' <b>'+c.rating.media+'</b> ('+c.rating.total+')</span>'):'';
+      var acts='<button class="btn dark" onclick="msgUser('+c.id+')">✉ Enviar mensagem</button>';
+      if(c.pode_avaliar){
+        var lbl=c.minha_nota?('★ Editar avaliação ('+c.minha_nota+')'):'★ Avaliar empresa';
+        acts+='<button class="btn ghost" onclick="abrirAvaliacao('+c.id+','+JSON.stringify(c.nome||'').replace(/"/g,'&quot;')+')">'+lbl+'</button>';
+      }
+      return '<div class="listcard"><div class="li">'+av+'</div><div><h4>'+esc(c.nome)+'</h4><div class="meta">'+meta+' · demonstrou interesse'+(rt?(' · '+rt):'')+'</div></div><div class="actions">'+acts+'</div></div>';
     }).join('');
   }).catch(function(){});
+}
+
+/* ---- Avaliações / reputação da empresa ---- */
+var REVIEW_ASPECTOS={comunicacao:'Comunicação clara',agilidade:'Processo ágil',transparencia:'Transparência',respeito:'Respeito no processo',feedback:'Deu feedback',cultura:'Cultura acolhedora'};
+function starsStr(n){var r=Math.round(Number(n)||0),s='';for(var i=1;i<=5;i++){s+=(i<=r)?'★':'☆';}return s;}
+function starsHtml(n,cls){return '<span class="stars'+(cls?(' '+cls):'')+'">'+starsStr(n)+'</span>';}
+var revState={company:0,nome:'',nota:0,aspectos:[],comentario:'',editing:false};
+function abrirAvaliacao(companyId,nome){
+  revState={company:companyId,nome:nome||'',nota:0,aspectos:[],comentario:'',editing:false};
+  openModal('<div class="pad"><p class="muted">Carregando…</p></div>');
+  api('/empresa/'+companyId+'/avaliacao/minha').then(function(d){
+    if(d&&d.minha){ revState.nota=d.minha.nota||0; revState.aspectos=d.minha.aspectos||[]; revState.comentario=d.minha.comentario||''; revState.editing=true; }
+    renderReviewModal();
+  }).catch(function(){ renderReviewModal(); });
+}
+function revCaptureComment(){ var t=document.getElementById('revComent'); if(t) revState.comentario=t.value; }
+function revSetNota(n){ revCaptureComment(); revState.nota=n; renderReviewModal(); }
+function revToggleAsp(k){ revCaptureComment(); var i=revState.aspectos.indexOf(k); if(i>-1) revState.aspectos.splice(i,1); else revState.aspectos.push(k); renderReviewModal(); }
+function renderReviewModal(){
+  var stars=''; for(var i=1;i<=5;i++){ stars+='<button type="button" class="'+(i<=revState.nota?'on':'')+'" onclick="revSetNota('+i+')">★</button>'; }
+  var chips=Object.keys(REVIEW_ASPECTOS).map(function(k){ var on=revState.aspectos.indexOf(k)>-1; return '<button type="button" class="soft-chip'+(on?' on':'')+'" onclick="revToggleAsp('+JSON.stringify(k).replace(/"/g,'&quot;')+')">'+(on?'✓ ':'')+esc(REVIEW_ASPECTOS[k])+'</button>'; }).join('');
+  var notaTxt=revState.nota?(revState.nota+' de 5'):'Toque nas estrelas';
+  var html='<div class="pad">'
+    +'<div style="display:flex;justify-content:space-between;align-items:flex-start"><h2 style="font-size:19px">Avaliar '+esc(revState.nome||'empresa')+'</h2><button class="icobtn" onclick="closeModal()">✕</button></div>'
+    +'<p class="muted" style="font-size:12.5px;margin:4px 0 10px">Sua avaliação é <b>anônima</b> para a empresa e ajuda outros candidatos.</p>'
+    +'<div class="rev-stars">'+stars+'</div><div style="text-align:center;font-size:12.5px;color:var(--muted);margin-bottom:12px">'+notaTxt+'</div>'
+    +'<label class="lbl">O que marcou a experiência? <span class="muted">(opcional)</span></label><div class="rev-aspects">'+chips+'</div>'
+    +'<label class="lbl" style="margin-top:12px">Comentário <span class="muted">(opcional)</span></label>'
+    +'<textarea class="inp2" id="revComent" maxlength="800" placeholder="Como foi o contato, o processo, a comunicação…">'+esc(revState.comentario)+'</textarea>'
+    +'<div style="display:flex;gap:8px;margin-top:14px;align-items:center">'
+    +'<button class="btn primary" onclick="revSalvar()">'+(revState.editing?'Salvar alterações':'Publicar avaliação')+'</button>'
+    +'<button class="btn ghost" onclick="closeModal()">Cancelar</button>'
+    +(revState.editing?'<button class="btn ghost" style="margin-left:auto;color:var(--red)" onclick="revRemover()">Remover</button>':'')
+    +'</div></div>';
+  openModal(html);
+}
+function revSalvar(){
+  revCaptureComment();
+  if(!revState.nota){ alertMsg('Escolha uma nota de 1 a 5 estrelas.'); return; }
+  api('/empresa/'+revState.company+'/avaliacao',{method:'POST',body:{nota:revState.nota,comentario:revState.comentario,aspectos:revState.aspectos}})
+    .then(function(){ closeModal(); alertMsg('Avaliação enviada! Obrigado ✓'); if(state.page==='empresas') hydrateInteressadas(); })
+    .catch(function(e){ alertMsg(e.message); });
+}
+function revRemover(){
+  if(!confirm('Remover sua avaliação desta empresa?')) return;
+  api('/empresa/'+revState.company+'/avaliacao',{method:'DELETE'})
+    .then(function(){ closeModal(); alertMsg('Avaliação removida.'); if(state.page==='empresas') hydrateInteressadas(); })
+    .catch(function(e){ alertMsg(e.message); });
+}
+function renderReputacao(box, rep){
+  if(!box) return;
+  if(!rep||!rep.total){ box.innerHTML='<p class="muted" style="font-size:13px">Ainda sem avaliações. Quando os candidatos avaliarem sua empresa, a reputação aparece aqui.</p>'; return; }
+  var dist=rep.distribuicao||{}, total=rep.total||1;
+  var rows=''; for(var s=5;s>=1;s--){ var q=dist[s]||0, pct=Math.round(q/total*100); rows+='<div class="rep-row"><span class="lb">'+s+' ★</span><span class="rep-bar"><i style="width:'+pct+'%"></i></span><span>'+q+'</span></div>'; }
+  var asp=rep.aspectos||{}, aspHtml='';
+  var keys=Object.keys(asp); if(keys.length){ aspHtml='<div class="rev-aspects" style="margin-top:14px">'+keys.slice(0,6).map(function(k){ return '<span class="soft-chip on" style="cursor:default">'+esc(REVIEW_ASPECTOS[k]||k)+' · '+asp[k]+'</span>'; }).join('')+'</div>'; }
+  var coms=(rep.avaliacoes||[]).filter(function(a){return (a.comentario||'').trim();}).slice(0,5).map(function(a){
+    var who='Candidato(a)'+(a.cargo?(' · '+esc(a.cargo)):'');
+    return '<div class="rev-comment"><div class="who">'+starsHtml(a.nota)+' · '+who+'</div><p>'+esc(a.comentario)+'</p></div>';
+  }).join('');
+  box.innerHTML='<div class="rep-head"><div class="rep-score"><div class="n">'+rep.media+'</div>'+starsHtml(rep.media,'big')+'<div class="muted" style="font-size:12px;margin-top:4px">'+total+' avaliação'+(total>1?'es':'')+'</div></div>'
+    +'<div class="rep-dist">'+rows+'</div></div>'+aspHtml+(coms?('<div style="margin-top:8px">'+coms+'</div>'):'');
 }
 
 /* ---- Meu Currículo (candidato) ---- */
@@ -2088,6 +2178,8 @@ function hydrateCompanyProfile(){
     setVal('cTamanho',p.tamanho); setVal('cWebsite',p.website); setVal('cLinkedin',p.linkedin);
     setVal('cEstado',p.estado||''); locInit('cEstado','cCidade',p.estado,p.cidade);
   }).catch(function(){});
+  var cid=(VZ.user&&VZ.user.id)||0;
+  if(cid) api('/empresa/'+cid+'/avaliacoes',{auth:false}).then(function(rep){ renderReputacao(document.getElementById('repBox'),rep); }).catch(function(){ renderReputacao(document.getElementById('repBox'),null); });
   var btn=document.getElementById('btnSaveProfile');
   if(btn) btn.onclick=function(){
     api('/company/profile',{method:'PUT',body:{
@@ -2254,7 +2346,8 @@ var PAGES_E={
    +fldI('cSegmento','Segmento')+fldI('cTamanho','Tamanho da Empresa')
    +locSelectsHTML('cEstado','cCidade','','')
    +fldI('cWebsite','Website')+fldI('cLinkedin','LinkedIn')
-  +'</div></div></div>');},
+  +'</div></div></div>'
+  +'<div class="card" style="margin-top:16px"><div class="pad"><h3 style="margin-bottom:4px">⭐ Reputação da empresa</h3><p class="muted" style="font-size:12.5px;margin-bottom:14px">Como os candidatos avaliam sua empresa. Avaliações são anônimas.</p><div id="repBox"><p class="muted">Carregando…</p></div></div></div>');},
 
  config:function(){return page('Configurações','Gerencie preferências, notificações e segurança da conta.','',
   '<div class="cols"><div class="card"><div class="pad"><h3 style="margin-bottom:6px">Notificações</h3>'
