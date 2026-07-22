@@ -472,6 +472,12 @@
   .modelo-bar .lbl{white-space:nowrap;font-weight:700;color:var(--blue)}
   .modelo-bar select{flex:1;min-width:200px}
   .modelo-tip{font-size:12.5px;color:var(--green-2);background:var(--green-bg);border-radius:8px;padding:8px 12px;font-weight:600}
+  .vg-skillbox{border:1px solid var(--line);border-radius:12px;padding:12px;max-height:240px;overflow:auto;background:#fafaff}
+  .vg-cat{margin-bottom:11px}
+  .vg-cat:last-child{margin-bottom:0}
+  .vg-cat-h{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+  .vg-chips{display:flex;flex-wrap:wrap;gap:7px}
+  .vg-sel{margin-top:10px;padding:10px 12px;border:1px dashed var(--line-2);border-radius:12px;background:var(--blue-soft)}
 
   /* ---------- REPUTAÇÃO / AVALIAÇÕES ---------- */
   .stars{color:#E0A23C;letter-spacing:1px;font-size:14px;white-space:nowrap}
@@ -859,6 +865,9 @@ function obInit(role){
       var added=fillEmpty(p);
       if(!obState.data.razao_social) obState.data.razao_social=(VZ.user&&VZ.user.nome)||'';
       if(added) renderOnboarding();
+      // Autopreenche pela Receita a partir do CNPJ informado no cadastro.
+      var d=(''+(obState.data.cnpj||'')).replace(/\D/g,'');
+      if(d.length===14 && (!obState.data.ramo || !obState.data.cidade)){ obCnpjLookupFill(d); }
     }).catch(function(){});
     return;
   }
@@ -1242,6 +1251,16 @@ function obCnpjAuto(el){
     if(r.estado){ obState.data.estado=r.estado; }
     if(hint){ hint.textContent='✓ Preenchido pela Receita — confira e ajuste se precisar.'; hint.style.color='var(--green-2)'; }
   }).catch(function(e){ if(hint){ hint.textContent=(e&&e.message)||'Não foi possível consultar o CNPJ agora.'; hint.style.color='var(--muted)'; } });
+}
+/* Busca dados da Receita a partir de um CNPJ já conhecido (vindo do cadastro) e preenche campos vazios. */
+function obCnpjLookupFill(d){
+  var hint=document.getElementById('obCnpjHint'); if(hint){ hint.textContent='Buscando dados na Receita…'; hint.style.color='var(--muted)'; }
+  api('/cnpj/'+d,{auth:false}).then(function(r){
+    var f=function(k,v){ if(v!=null && v!=='' && (obState.data[k]==null||obState.data[k]==='')) obState.data[k]=v; };
+    f('razao_social',r.razao_social); f('nome_fantasia',r.nome_fantasia); f('ramo',r.ramo); f('cidade',r.cidade); f('estado',r.estado);
+    renderOnboarding();
+    if(hint){ hint.textContent='✓ Preenchido pela Receita — confira e ajuste se precisar.'; hint.style.color='var(--green-2)'; }
+  }).catch(function(){ if(hint) hint.textContent=''; });
 }
 
 var vzFooterDone=false;
@@ -1691,11 +1710,13 @@ function candidatar(id,btn){
 /* ---- Vagas: empresa ---- */
 function vagaFormToggle(){var f=document.getElementById('vagaForm'); if(f) f.style.display=(f.style.display==='none'?'block':'none');}
 function hydrateCompanyVagas(){
+  vgSkillsSel=[];
   // Carrega skills e modelos coerentes com o ramo da empresa (padeiro ≠ dev).
-  api('/company/profile').then(function(p){ var ramo=(p&&p.ramo)||''; loadCatalog(null,ramo); loadTemplates(fillVagaModelos,ramo); })
-    .catch(function(){ loadCatalog(); loadTemplates(fillVagaModelos); });
+  api('/company/profile').then(function(p){ var ramo=(p&&p.ramo)||''; loadCatalog(renderVagaSkillChips,ramo); loadTemplates(fillVagaModelos,ramo); if(!ramo){ var h=document.getElementById('vgRamoWarn'); if(h) h.style.display='block'; } })
+    .catch(function(){ loadCatalog(renderVagaSkillChips); loadTemplates(fillVagaModelos); });
   var fb=document.getElementById('vagaFormBody');
   if(fb) fb.innerHTML='<h3 style="margin-bottom:10px">Publicar nova vaga</h3>'
+    +'<div id="vgRamoWarn" style="display:none;font-size:12.5px;color:var(--orange-2);background:var(--orange-bg);border-radius:10px;padding:9px 12px;margin-bottom:12px">⚠ Defina o <b>ramo de atuação</b> em <a href="#" onclick="navTo(\'perfil\');return false;" style="color:var(--orange-2);text-decoration:underline">Meu Perfil</a> para os modelos e skills virem do seu setor.</div>'
     +'<div class="modelo-bar"><label class="lbl" style="margin-bottom:0">⚡ Começar de um modelo</label>'
       +'<select class="inp2" id="vgModelo" onchange="aplicarModeloVaga()"><option value="">Carregando modelos…</option></select></div>'
     +'<div class="formgrid">'
@@ -1705,7 +1726,11 @@ function hydrateCompanyVagas(){
     +locSelectsHTML('vgEstado','vgCidade','','')
     +'<div><label class="lbl">Salário mín (R$)</label><input class="inp2" id="vgSalMin" type="number"></div>'
     +'<div><label class="lbl">Salário máx (R$)</label><input class="inp2" id="vgSalMax" type="number"></div>'
-    +'<div class="full"><label class="lbl">Skills desejadas <span class="muted">(separadas por vírgula — melhora o match)</span></label><input class="inp2" id="vgSkills" list="dlSkills" autocomplete="off" placeholder="Ex: React, TypeScript, Node"></div>'
+    +'<div class="full"><label class="lbl">Skills desejadas <span class="muted">(clique para selecionar — melhora o match)</span></label>'
+      +'<div id="vgSkillChips" class="vg-skillbox"><p class="muted" style="font-size:12.5px;margin:0">Carregando skills do seu ramo…</p></div>'
+      +'<div class="hs-add" style="margin-top:10px"><input class="inp2" id="vgSkillManual" list="dlSkills" autocomplete="off" placeholder="Skill específica desta vaga (ex: PDV Consinco)…" onkeydown="if(event.key===\'Enter\'){event.preventDefault();vgSkillAddManual();}"><button class="btn ghost" type="button" onclick="vgSkillAddManual()">+ Adicionar</button></div>'
+      +'<div class="vg-sel" id="vgSkillSel"></div>'
+    +'</div>'
     +'<div class="full" id="vgSkillHint"></div>'
     +'<div class="full"><label class="lbl">Descrição</label><textarea class="inp2" id="vgDesc" placeholder="Responsabilidades, requisitos, benefícios…"></textarea></div>'
     +'</div><div style="margin-top:12px;display:flex;gap:8px"><button class="btn primary" onclick="publicarVaga()">Publicar</button><button class="btn ghost" onclick="vagaFormToggle()">Cancelar</button></div>';
@@ -1725,10 +1750,33 @@ function aplicarModeloVaga(){
   setVal('vgTitulo',t.titulo||'');
   if(t.modalidade) setVal('vgModal',t.modalidade);
   if(t.nivel) setVal('vgNivel',t.nivel);
-  setVal('vgSkills',(t.skills||[]).join(', '));
+  vgSkillsSel=(t.skills||[]).slice(); renderVagaSkillChips();
   setVal('vgDesc',t.descricao||'');
   var hint=document.getElementById('vgSkillHint');
   if(hint) hint.innerHTML='<div class="modelo-tip">✓ Modelo aplicado — ajuste os campos como quiser antes de publicar.</div>';
+}
+/* ---- Seleção de skills da vaga (botões + campo manual) ---- */
+var vgSkillsSel=[];
+function vgSkillToggle(name){ var i=vgSkillsSel.indexOf(name); if(i>-1) vgSkillsSel.splice(i,1); else vgSkillsSel.push(name); renderVagaSkillChips(); }
+function vgSkillAddManual(){ var v=(val('vgSkillManual')||'').trim(); if(!v) return; if(vgSkillsSel.indexOf(v)===-1) vgSkillsSel.push(v); setVal('vgSkillManual',''); renderVagaSkillChips(); var el=document.getElementById('vgSkillManual'); if(el) el.focus(); }
+function renderVagaSkillChips(){
+  var box=document.getElementById('vgSkillChips'); if(!box) return;
+  var grupos=(vzCatalog&&vzCatalog.grupos)||[], flat=(vzCatalog&&vzCatalog.flat)||[];
+  var html=grupos.map(function(g){
+    return '<div class="vg-cat"><div class="vg-cat-h">'+esc(g.categoria)+'</div><div class="vg-chips">'
+      +(g.skills||[]).map(function(s){ var on=vgSkillsSel.indexOf(s)>-1; return '<button type="button" class="soft-chip'+(on?' on':'')+'" onclick="vgSkillToggle('+JSON.stringify(s).replace(/"/g,'&quot;')+')">'+(on?'✓ ':'')+esc(s)+'</button>'; }).join('')
+      +'</div></div>';
+  }).join('');
+  box.innerHTML=html||'<p class="muted" style="font-size:12.5px;margin:0">Defina o ramo da empresa no perfil para ver skills sugeridas — ou adicione manualmente abaixo.</p>';
+  var sel=document.getElementById('vgSkillSel');
+  if(sel){
+    if(!vgSkillsSel.length){ sel.innerHTML='<span class="muted" style="font-size:12px">Nenhuma skill selecionada. Clique nas sugestões acima ou adicione as suas.</span>'; }
+    else{
+      sel.innerHTML='<div class="vg-cat-h" style="margin-bottom:7px">Selecionadas ('+vgSkillsSel.length+')</div><div class="vg-chips">'
+        +vgSkillsSel.map(function(s){ var extra=flat.indexOf(s)===-1; return '<span class="soft-chip on" title="'+(extra?'skill personalizada':'')+'">'+esc(s)+' <span onclick="vgSkillToggle('+JSON.stringify(s).replace(/"/g,'&quot;')+')" style="cursor:pointer;font-weight:800;margin-left:2px">×</span></span>'; }).join('')
+        +'</div>';
+    }
+  }
 }
 function reloadMyVagas(){
   api('/vagas?mine=1').then(function(list){var box=document.getElementById('myVagas'); if(!box) return;
@@ -1741,7 +1789,7 @@ function reloadMyVagas(){
 }
 function publicarVaga(){
   var titulo=(val('vgTitulo')||'').trim(); if(!titulo){ alertMsg('Informe o título da vaga.'); return; }
-  var skills=(val('vgSkills')||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
+  var skills=(vgSkillsSel||[]).slice();
   var body={titulo:titulo,modalidade:val('vgModal'),nivel:val('vgNivel'),estado:val('vgEstado'),cidade:val('vgCidade'),salario_min:val('vgSalMin'),salario_max:val('vgSalMax'),descricao:val('vgDesc'),skills:skills,status:'ativa'};
   api('/vagas',{method:'POST',body:body}).then(function(){ vagaFormToggle(); alertMsg('Vaga publicada! ✓'); reloadMyVagas(); }).catch(function(e){ alertMsg(e.message); });
 }
@@ -2266,6 +2314,19 @@ function hydrateCompanyProfile(){
     }).catch(function(e){ alertMsg(e.message); });
   };
 }
+/* Puxa dados públicos da Receita a partir do CNPJ já cadastrado (perfil da empresa). */
+function profileCnpjLookup(btn){
+  var d=(val('cCnpj')||'').replace(/\D/g,'');
+  if(d.length!==14){ alertMsg('CNPJ inválido no cadastro.'); return; }
+  if(btn){ btn.disabled=true; btn.textContent='Buscando…'; }
+  loadRamos();
+  api('/cnpj/'+d,{auth:false}).then(function(r){
+    if(r.ramo){ var s=document.getElementById('cRamo'); if(s){ s.innerHTML=ramoOptions(r.ramo); s.value=r.ramo; } }
+    if(r.estado){ setVal('cEstado',r.estado); locInit('cEstado','cCidade',r.estado,r.cidade||''); }
+    alertMsg('Dados da Receita carregados. Revise e clique em Salvar. ✓');
+  }).catch(function(e){ alertMsg(e.message||'Não foi possível consultar o CNPJ.'); })
+    .finally(function(){ if(btn){ btn.disabled=false; btn.textContent='↻ Receita'; } });
+}
 </script>
 
 <script>
@@ -2418,9 +2479,11 @@ var PAGES_E={
   '<div class="card"><div class="pad">'
   +'<div style="display:flex;gap:16px;align-items:center;margin-bottom:8px"><div class="avatar" style="width:64px;height:64px;font-size:20px;border-radius:14px" id="avatarProfile">'+avatarInner((VZ.user&&VZ.user.avatar),(((VZ.user&&VZ.user.nome)||'V').trim()[0]||'V').toUpperCase())+'</div><div><h2 style="font-size:20px">'+esc((VZ.user&&VZ.user.nome)||'Sua empresa')+'</h2><div class="muted">Complete o perfil para os candidatos te encontrarem.</div></div><button class="btn ghost" style="margin-left:auto" onclick="pickAvatar()">Alterar Logo</button></div>'
   +'<div class="formgrid" style="margin-top:18px">'
-   +fldI('cRazao','Razão Social')+fldIRO('cCnpj','CNPJ')
+   +fldI('cRazao','Razão Social')
+   +'<div><label class="lbl">CNPJ <span class="muted">(somente leitura)</span></label><div style="display:flex;gap:8px"><input class="inp2" id="cCnpj" disabled style="background:var(--bg);color:var(--muted)"><button class="btn ghost" type="button" style="white-space:nowrap" onclick="profileCnpjLookup(this)">↻ Receita</button></div></div>'
    +'<div><label class="lbl">Ramo de atuação</label><select class="inp2" id="cRamo"><option value="">Selecione…</option></select></div>'
-   +fldI('cSegmento','Segmento (detalhe)')+fldI('cTamanho','Tamanho da Empresa')
+   +'<div><label class="lbl">Tamanho da Empresa</label><select class="inp2" id="cTamanho"><option value="">Selecione…</option>'+['1–10 funcionários','11–50 funcionários','51–200 funcionários','201–500 funcionários','501–1000 funcionários','Mais de 1000'].map(function(o){return '<option>'+o+'</option>';}).join('')+'</select></div>'
+   +fldI('cSegmento','Segmento (detalhe)')
    +locSelectsHTML('cEstado','cCidade','','')
    +fldI('cWebsite','Website')+fldI('cLinkedin','LinkedIn')
   +'</div></div></div>'
