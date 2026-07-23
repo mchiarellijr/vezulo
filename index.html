@@ -2054,7 +2054,15 @@ function copyBar(btn){ var i=document.getElementById('blBar'); if(!i) return; i.
   if(btn){ btn.textContent='Copiado!'; setTimeout(function(){btn.textContent='Copiar';},1500); } }
 
 /* ---- Buscar Talentos + desbloqueio (empresa) ---- */
-function hydrateBuscar(){ buscarTalentos(); }
+function hydrateBuscar(){ loadMyVagasOptions('talentVaga','Filtrar por uma vaga publicada…'); buscarTalentos(); }
+function loadMyVagasOptions(selId,placeholder){
+  var sel=document.getElementById(selId); if(!sel) return;
+  api('/vagas?mine=1').then(function(list){
+    var o='<option value="">'+esc(placeholder||'Todas')+'</option>';
+    (list||[]).forEach(function(v){ o+='<option value="'+v.id+'">'+esc(v.titulo)+'</option>'; });
+    sel.innerHTML=o;
+  }).catch(function(){});
+}
 function pkgCard(p,btnLabel){
   var per=p.vezus?('R$ '+(Number(p.preco)/p.vezus).toFixed(2).replace('.',',')+' / Vezu'):'';
   return '<div class="pkg'+(p.popular?' pop':'')+'">'+(p.popular?'<span class="ptag">Popular</span>':'')
@@ -2064,10 +2072,11 @@ function pkgCard(p,btnLabel){
 }
 function renderPkgs(id){ api('/vezus/packages').then(function(pks){ var g=document.getElementById(id); if(!g) return; g.innerHTML=(pks||[]).map(function(p){return pkgCard(p);}).join(''); }).catch(function(){}); }
 function buscarTalentos(){
-  var q=val('talentQ')||'', box=document.getElementById('talentList');
+  var q=val('talentQ')||'', status=val('talentStatus')||'', vaga=val('talentVaga')||'', box=document.getElementById('talentList');
   if(box) box.innerHTML='<p class="muted">Buscando…</p>';
   renderPkgs('buscaPkgs');
-  api('/company/talentos'+(q?('?q='+encodeURIComponent(q)):'')).then(function(list){ if(!box) return;
+  var qs=[]; if(q)qs.push('q='+encodeURIComponent(q)); if(status)qs.push('status='+encodeURIComponent(status)); if(vaga)qs.push('vaga_id='+encodeURIComponent(vaga));
+  api('/company/talentos'+(qs.length?('?'+qs.join('&')):'')).then(function(list){ if(!box) return;
     var cnt=document.getElementById('talentCount');
     if(!list||!list.length){ if(cnt) cnt.textContent='Nenhum talento correspondente'; box.innerHTML='<p class="muted" style="grid-column:1/-1">Nenhum candidato encontrado. Ajuste a busca ou aguarde novos cadastros.</p>'; return; }
     if(cnt) cnt.textContent=list.length+' talento'+(list.length>1?'s':'')+' correspondente'+(list.length>1?'s':'');
@@ -2158,11 +2167,18 @@ function desbloquearModal(id,btn){ if(btn){btn.disabled=true;btn.textContent='De
 }
 
 /* ---- Match Inteligente / Favoritos / Banco (empresa) ---- */
-function hydrateMatch(){ gerarRanking(); }
+function hydrateMatch(){
+  loadMyVagasOptions('matchVaga','Escolha uma vaga publicada…');
+  var box=document.getElementById('matchList');
+  if(box) box.innerHTML='<div class="card"><div class="pad" style="text-align:center;color:var(--muted);padding:34px 20px"><div style="font-size:28px">◈</div><p style="margin-top:10px;font-size:14px">Descreva o perfil ideal <b>ou</b> escolha uma vaga publicada acima — a IA rankeia só os candidatos compatíveis.</p></div></div>';
+}
 function gerarRanking(){
-  var q=val('matchQ')||'', box=document.getElementById('matchList'); if(box) box.innerHTML='<p class="muted">Gerando ranking…</p>';
-  api('/company/talentos'+(q?('?q='+encodeURIComponent(q)):'')).then(function(list){ if(!box) return;
-    if(!list||!list.length){ box.innerHTML='<p class="muted">Nenhum candidato encontrado. Ajuste os termos.</p>'; return; }
+  var q=val('matchQ')||'', vaga=val('matchVaga')||'', box=document.getElementById('matchList');
+  if(!q && !vaga){ if(box) box.innerHTML='<p class="muted" style="padding:8px 2px">Descreva o perfil ou escolha uma vaga para gerar o ranking.</p>'; return; }
+  if(box) box.innerHTML='<p class="muted">Gerando ranking…</p>';
+  var qs=[]; if(q)qs.push('q='+encodeURIComponent(q)); if(vaga)qs.push('vaga_id='+encodeURIComponent(vaga));
+  api('/company/talentos?'+qs.join('&')).then(function(list){ if(!box) return;
+    if(!list||!list.length){ box.innerHTML='<p class="muted" style="padding:8px 2px">Nenhum candidato compatível encontrado. Ajuste os termos ou a vaga.</p>'; return; }
     box.innerHTML=list.map(renderTalent).join('');
   }).catch(function(e){ if(box) box.innerHTML='<p class="muted">'+esc(e.message)+'</p>'; });
 }
@@ -2493,7 +2509,11 @@ var PAGES_E={
   '<div class="card" style="background:linear-gradient(120deg,#F7F4FF,#fff);margin-bottom:18px"><div class="pad">'
     +'<div class="row" style="gap:12px;align-items:center"><div class="ico v-violet" style="width:40px;height:40px;border-radius:11px;display:grid;place-items:center;font-size:18px">✦</div>'
     +'<input class="inp2" id="talentQ" style="flex:1;border:none;background:transparent;font-weight:600" placeholder="Ex: farmacêutico em Curitiba com experiência em manipulação" onkeydown="if(event.key===\'Enter\')buscarTalentos()">'
-    +'<button class="btn primary sm" onclick="buscarTalentos()">Buscar com IA</button></div></div></div>'
+    +'<button class="btn primary sm" onclick="buscarTalentos()">Buscar com IA</button></div>'
+    +'<div class="row" style="gap:10px;margin-top:12px;flex-wrap:wrap">'
+      +'<select class="inp2" id="talentVaga" style="flex:1;min-width:200px" onchange="buscarTalentos()"><option value="">Filtrar por uma vaga publicada…</option></select>'
+      +'<select class="inp2" id="talentStatus" style="flex:1;min-width:180px" onchange="buscarTalentos()"><option value="">Qualquer status</option><option value="Disponível">🟢 Disponível</option><option value="Aberto a oportunidades">🟡 Aberto a oportunidades</option><option value="Trabalhando">⚪ Trabalhando</option></select>'
+    +'</div></div></div>'
   +'<div class="between" style="margin-bottom:14px"><span id="talentCount" style="font-family:\'Sora\',sans-serif;font-weight:700;font-size:14px;color:var(--navy)">Buscando talentos…</span><span class="chip gold">🪙 Desbloqueio = 1 Vezu</span></div>'
   +'<div id="talentList" class="grid" style="grid-template-columns:1fr 1fr"><p class="muted">Carregando…</p></div>'
   +'<div class="card" style="margin-top:20px"><div class="pad"><div class="card-h"><h3>Recarregar Vezus</h3><span class="chip gold" style="margin-left:auto">quanto maior o pacote, menor o preço/Vezu</span></div><div id="buscaPkgs" class="pkgs"><p class="muted">Carregando pacotes…</p></div></div></div>');},
@@ -2502,7 +2522,8 @@ var PAGES_E={
   '<div id="vagaForm" class="card" style="margin-bottom:16px;display:none"><div class="pad" id="vagaFormBody"></div></div><div id="myVagas"><p class="muted">Carregando…</p></div>');},
 
  match:function(){return page('Match Inteligente','Descreva o perfil ideal e a IA rankeia os candidatos.','',
-  '<div class="card" style="background:linear-gradient(135deg,#4C2FBF,#5B3DEF);color:#fff;margin-bottom:16px"><div class="pad" style="text-align:center;padding:28px"><div style="font-size:30px">◈</div><h3 style="color:#fff;margin:8px 0">Descreva o profissional ideal</h3><div style="display:flex;gap:10px;max-width:640px;margin:12px auto 0"><input class="inp2" id="matchQ" style="flex:1" placeholder="Ex: desenvolvedor React sênior em São Paulo" onkeydown="if(event.key===\'Enter\')gerarRanking()"><button class="btn orange" onclick="gerarRanking()">Gerar Ranking</button></div></div></div>'
+  '<div class="card" style="background:linear-gradient(135deg,#4C2FBF,#5B3DEF);color:#fff;margin-bottom:16px"><div class="pad" style="text-align:center;padding:28px"><div style="font-size:30px">◈</div><h3 style="color:#fff;margin:8px 0">Descreva o profissional ideal</h3><div style="display:flex;gap:10px;max-width:640px;margin:12px auto 0"><input class="inp2" id="matchQ" style="flex:1" placeholder="Ex: desenvolvedor React sênior em São Paulo" onkeydown="if(event.key===\'Enter\')gerarRanking()"><button class="btn orange" onclick="gerarRanking()">Gerar Ranking</button></div>'
+    +'<div style="max-width:640px;margin:12px auto 0;display:flex;align-items:center;gap:10px"><span style="opacity:.8;font-size:12.5px;white-space:nowrap">ou pela vaga:</span><select class="inp2" id="matchVaga" style="flex:1" onchange="gerarRanking()"><option value="">Escolha uma vaga publicada…</option></select></div></div></div>'
   +'<div id="matchList"><p class="muted">Carregando…</p></div>');},
 
  favoritos:function(){return page('Candidatos Favoritos','Profissionais que você salvou.','',
