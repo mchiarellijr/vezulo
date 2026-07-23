@@ -129,7 +129,18 @@
   .main{flex:1;min-width:0;display:flex;flex-direction:column;background:#fff;border-radius:var(--r-lg);box-shadow:var(--shadow-sm);overflow:hidden}
   #pageContent{flex:1 0 auto}
   .top{height:64px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:16px;padding:0 26px;position:sticky;top:0;z-index:5}
-  .search{flex:1;max-width:340px;background:var(--bg);border:1px solid var(--line-2);border-radius:12px;padding:10px 14px;color:var(--muted);font-size:13px}
+  .search-wrap{position:relative;flex:1;max-width:340px}
+  .search{width:100%;background:var(--bg);border:1px solid var(--line-2);border-radius:12px;padding:10px 14px;color:var(--ink);font-size:13px;font-family:inherit;outline:none}
+  .search:focus{border-color:var(--blue-3);background:#fff}
+  .search-drop{display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;background:#fff;border:1px solid var(--line-2);border-radius:14px;box-shadow:var(--shadow-lg);max-height:70vh;overflow:auto;z-index:70;padding:6px}
+  .search-drop.show{display:block}
+  .sd-group{font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted-2);padding:9px 10px 4px}
+  .sd-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;transition:.12s}
+  .sd-item:hover{background:var(--bg)}
+  .sd-ic{width:34px;height:34px;border-radius:9px;flex-shrink:0;display:grid;place-items:center;font-weight:700;font-size:12px;background:var(--blue-soft);color:var(--blue);overflow:hidden}
+  .sd-item h5{font-size:13.5px;font-weight:600;color:var(--ink);margin:0}
+  .sd-item .sd-sub{font-size:11.5px;color:var(--muted)}
+  .sd-empty{padding:16px 12px;font-size:13px;color:var(--muted);text-align:center}
   .top .spacer{flex:1}
   .vezus-pill{display:flex;align-items:center;gap:9px;background:linear-gradient(120deg,#2E1E52,#3a2560);color:#fff;font-weight:700;font-size:13px;padding:8px 14px;border-radius:12px;box-shadow:var(--shadow-sm)}
   .vezus-pill .v{width:24px;height:24px;border-radius:50%;background:var(--grad-gold);color:#3a2405;display:grid;place-items:center;font-size:12px;font-weight:800}
@@ -393,7 +404,7 @@
     .auth{grid-template-columns:1fr}.auth-art{display:none}.lp-feats{grid-template-columns:1fr}.lp-hero h1{font-size:38px}.formgrid{grid-template-columns:1fr}
     .top{padding:0 16px}.page-h h1{font-size:20px}
   }
-  @media(max-width:600px){.kpis{grid-template-columns:1fr 1fr}.search{display:none}.roi{grid-template-columns:1fr}.formgrid{grid-template-columns:1fr}}
+  @media(max-width:600px){.kpis{grid-template-columns:1fr 1fr}.search-wrap{display:none}.roi{grid-template-columns:1fr}.formgrid{grid-template-columns:1fr}}
 
   /* ---------- VERIFY BANNER ---------- */
   .verify-banner{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--orange-bg);border:1px solid #f0d9ac;color:#8a5a13;border-radius:13px;padding:12px 16px;margin:0 0 18px;font-size:13.5px}
@@ -689,7 +700,10 @@
   <div class="main">
     <div class="top">
       <button class="menu-toggle" onclick="toggleSide()" aria-label="Menu">☰</button>
-      <div class="search">🔍 Pesquisa global…</div>
+      <div class="search-wrap">
+        <input class="search" id="globalSearch" autocomplete="off" placeholder="🔍 Buscar…" oninput="globalSearchDebounced()" onkeydown="if(event.key==='Enter'){globalSearchNow();}else if(event.key==='Escape'){closeSearchDrop();}">
+        <div class="search-drop" id="searchDrop"></div>
+      </div>
       <div class="spacer"></div>
       <div id="vezusPill" class="vezus-pill hidden"><span class="v">V</span> <b>145</b></div>
       <button class="bell" title="Notificações" aria-label="Notificações">🔔<span class="bell-dot"></span></button>
@@ -1306,6 +1320,46 @@ function buildNav(){
   document.getElementById('sideNav').innerHTML=h;
 }
 function navTo(p){ state.page=p; buildNav(); renderPage(); toggleSide(false); window.scrollTo(0,0); }
+
+/* ---- Pesquisa global ---- */
+var gsTimer=null;
+function globalSearchDebounced(){ clearTimeout(gsTimer); gsTimer=setTimeout(globalSearchNow,300); }
+function closeSearchDrop(){ var d=document.getElementById('searchDrop'); if(d) d.classList.remove('show'); }
+function globalSearchNow(){
+  var q=(val('globalSearch')||'').trim(), d=document.getElementById('searchDrop'); if(!d) return;
+  if(q.length<2){ d.classList.remove('show'); d.innerHTML=''; return; }
+  d.classList.add('show'); d.innerHTML='<div class="sd-empty">Buscando…</div>';
+  api('/search?q='+encodeURIComponent(q)).then(function(r){ renderSearchResults(r||{}); }).catch(function(){ d.innerHTML='<div class="sd-empty">Não foi possível buscar agora.</div>'; });
+}
+function sdItem(ic,icClass,title,sub,onclick){
+  return '<div class="sd-item" onclick="'+onclick+'"><div class="sd-ic" style="'+(icClass||'')+'">'+ic+'</div><div><h5>'+esc(title)+'</h5>'+(sub?'<div class="sd-sub">'+esc(sub)+'</div>':'')+'</div></div>';
+}
+function renderSearchResults(r){
+  var d=document.getElementById('searchDrop'); if(!d) return;
+  var h='', any=false;
+  if(r.candidatos&&r.candidatos.length){ any=true; h+='<div class="sd-group">Candidatos</div>';
+    r.candidatos.forEach(function(c){ var ini=esc((c.nome||'?').substring(0,2)).toUpperCase(); var ic=c.avatar?('<img src="'+esc(c.avatar)+'" style="width:100%;height:100%;object-fit:cover">'):ini;
+      h+=sdItem(ic,'',c.nome,[c.cargo,c.cidade].filter(Boolean).join(' · '),'gsGo(\'talento\','+c.id+')'); }); }
+  if(r.vagas&&r.vagas.length){ any=true; h+='<div class="sd-group">Vagas</div>';
+    r.vagas.forEach(function(v){ h+=sdItem('✦','background:var(--grad);color:#fff',v.titulo,[v.empresa,v.cidade].filter(Boolean).join(' · '),'gsGo(\'vaga\','+v.id+')'); }); }
+  if(r.empresas&&r.empresas.length){ any=true; h+='<div class="sd-group">Empresas</div>';
+    r.empresas.forEach(function(e){ var ini=esc((e.nome||'?').substring(0,2)).toUpperCase(); var ic=e.avatar?('<img src="'+esc(e.avatar)+'" style="width:100%;height:100%;object-fit:cover">'):ini;
+      h+=sdItem(ic,'',e.nome,[e.segmento,e.cidade].filter(Boolean).join(' · '),'gsEmpresa('+JSON.stringify(e).replace(/"/g,'&quot;')+')'); }); }
+  d.innerHTML=any?h:'<div class="sd-empty">Nada encontrado para essa busca.</div>';
+}
+function gsGo(tipo,id){
+  closeSearchDrop(); var s=document.getElementById('globalSearch'); if(s) s.value='';
+  if(tipo==='talento'){ if(typeof openTalento==='function') openTalento(id); }
+  else if(tipo==='vaga'){ navTo('vagas'); }
+}
+function gsEmpresa(e){
+  closeSearchDrop(); var s=document.getElementById('globalSearch'); if(s) s.value='';
+  openModal('<div class="pad"><div style="display:flex;justify-content:space-between;align-items:flex-start"><h2 style="font-size:19px">'+esc(e.nome||'Empresa')+'</h2><button class="icobtn" onclick="closeModal()">✕</button></div>'
+    +'<p class="muted" style="margin-top:6px">'+esc([e.segmento,e.cidade].filter(Boolean).join(' · ')||'—')+'</p>'
+    +'<p style="margin-top:12px;font-size:13.5px;color:var(--muted)">Fique de olho nas vagas desta empresa em <b>Vagas Recomendadas</b>.</p>'
+    +'<div style="margin-top:14px"><button class="btn primary" onclick="closeModal();navTo(\'vagas\')">Ver vagas</button></div></div>');
+}
+document.addEventListener('click',function(ev){ var w=document.querySelector('.search-wrap'); if(w&&!w.contains(ev.target)) closeSearchDrop(); });
 function toggleSide(force){
   var s=document.querySelector('.side'), b=document.getElementById('backdrop'); if(!s) return;
   var open = (force===undefined) ? !s.classList.contains('open') : force;
