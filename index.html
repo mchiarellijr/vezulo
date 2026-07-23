@@ -1715,9 +1715,9 @@ function hydrateCompanyVagas(){
   api('/company/profile').then(function(p){ var ramo=(p&&p.ramo)||''; loadCatalog(renderVagaSkillChips,ramo); loadTemplates(fillVagaModelos,ramo); if(!ramo){ var h=document.getElementById('vgRamoWarn'); if(h) h.style.display='block'; } })
     .catch(function(){ loadCatalog(renderVagaSkillChips); loadTemplates(fillVagaModelos); });
   var fb=document.getElementById('vagaFormBody');
-  if(fb) fb.innerHTML='<h3 style="margin-bottom:10px">Publicar nova vaga</h3>'
+  if(fb) fb.innerHTML='<h3 style="margin-bottom:10px" id="vgFormTitle">Publicar nova vaga</h3>'
     +'<div id="vgRamoWarn" style="display:none;font-size:12.5px;color:var(--orange-2);background:var(--orange-bg);border-radius:10px;padding:9px 12px;margin-bottom:12px">⚠ Defina o <b>ramo de atuação</b> em <a href="#" onclick="navTo(\'perfil\');return false;" style="color:var(--orange-2);text-decoration:underline">Meu Perfil</a> para os modelos e skills virem do seu setor.</div>'
-    +'<div class="modelo-bar"><label class="lbl" style="margin-bottom:0">⚡ Começar de um modelo</label>'
+    +'<div class="modelo-bar" id="vgModeloBar"><label class="lbl" style="margin-bottom:0">⚡ Começar de um modelo</label>'
       +'<select class="inp2" id="vgModelo" onchange="aplicarModeloVaga()"><option value="">Carregando modelos…</option></select></div>'
     +'<div class="formgrid">'
     +'<div class="full"><label class="lbl">Título</label><input class="inp2" id="vgTitulo" placeholder="Ex: Desenvolvedor Frontend Sênior"></div>'
@@ -1726,17 +1726,62 @@ function hydrateCompanyVagas(){
     +locSelectsHTML('vgEstado','vgCidade','','')
     +'<div><label class="lbl">Salário mín (R$)</label><input class="inp2" id="vgSalMin" type="number"></div>'
     +'<div><label class="lbl">Salário máx (R$)</label><input class="inp2" id="vgSalMax" type="number"></div>'
+    +'<div><label class="lbl">Situação</label><select class="inp2" id="vgStatus"><option value="ativa">Ativa</option><option value="pausada">Pausada</option></select></div><div></div>'
     +'<div class="full"><label class="lbl">Skills desejadas <span class="muted">(clique para selecionar — melhora o match)</span></label>'
       +'<div id="vgSkillChips" class="vg-skillbox"><p class="muted" style="font-size:12.5px;margin:0">Carregando skills do seu ramo…</p></div>'
       +'<div class="hs-add" style="margin-top:10px"><input class="inp2" id="vgSkillManual" list="dlSkills" autocomplete="off" placeholder="Skill específica desta vaga (ex: PDV Consinco)…" onkeydown="if(event.key===\'Enter\'){event.preventDefault();vgSkillAddManual();}"><button class="btn ghost" type="button" onclick="vgSkillAddManual()">+ Adicionar</button></div>'
       +'<div class="vg-sel" id="vgSkillSel"></div>'
     +'</div>'
     +'<div class="full" id="vgSkillHint"></div>'
-    +'<div class="full"><label class="lbl">Descrição</label><textarea class="inp2" id="vgDesc" placeholder="Responsabilidades, requisitos, benefícios…"></textarea></div>'
-    +'</div><div style="margin-top:12px;display:flex;gap:8px"><button class="btn primary" onclick="publicarVaga()">Publicar</button><button class="btn ghost" onclick="vagaFormToggle()">Cancelar</button></div>';
-  var b=document.getElementById('vagaAddBtn'); if(b) b.onclick=vagaFormToggle;
+    +'<div class="full"><label class="lbl">Descrição</label><textarea class="inp2" id="vgDesc" placeholder="Responsabilidades, requisitos…"></textarea></div>'
+    +'<div class="full"><label class="lbl">Benefícios <span class="muted">(clique para selecionar)</span></label>'
+      +'<div id="vgBenefChips" class="vg-chips" style="margin-top:2px"></div>'
+      +'<div class="hs-add" style="margin-top:10px"><input class="inp2" id="vgBenefManual" autocomplete="off" placeholder="Outro benefício (ex: Auxílio-creche)…" onkeydown="if(event.key===\'Enter\'){event.preventDefault();vgBenefAddManual();}"><button class="btn ghost" type="button" onclick="vgBenefAddManual()">+ Adicionar</button></div>'
+      +'<div class="vg-sel" id="vgBenefSelBox"></div>'
+    +'</div>'
+    +'</div><div style="margin-top:12px;display:flex;gap:8px"><button class="btn primary" id="vgSaveBtn" onclick="publicarVaga()">Publicar</button><button class="btn ghost" onclick="vagaCancel()">Cancelar</button></div>';
+  renderVagaBenefChips();
+  var b=document.getElementById('vagaAddBtn'); if(b) b.onclick=function(){ vagaReset(); var f=document.getElementById('vagaForm'); if(f) f.style.display='block'; window.scrollTo(0,0); };
   reloadMyVagas();
 }
+var BENEFICIOS=['Vale-transporte','Vale-refeição','Vale-alimentação','Plano de saúde','Plano odontológico','Seguro de vida','Home office','Horário flexível','Day off no aniversário','Auxílio academia / Gympass','Participação nos lucros (PLR)','Comissão','Bônus por metas','Auxílio-creche','Vale-combustível','Estacionamento','Convênio farmácia','Descontos em produtos','Auxílio home office','Plano de carreira','Cursos e treinamentos'];
+var vgBenefSel=[], vagaEditId=0;
+function vgBenefToggle(n){ var i=vgBenefSel.indexOf(n); if(i>-1) vgBenefSel.splice(i,1); else vgBenefSel.push(n); renderVagaBenefChips(); }
+function vgBenefAddManual(){ var v=(val('vgBenefManual')||'').trim(); if(!v) return; if(vgBenefSel.indexOf(v)===-1) vgBenefSel.push(v); setVal('vgBenefManual',''); renderVagaBenefChips(); var el=document.getElementById('vgBenefManual'); if(el) el.focus(); }
+function renderVagaBenefChips(){
+  var box=document.getElementById('vgBenefChips'); if(!box) return;
+  box.innerHTML=BENEFICIOS.map(function(n){ var on=vgBenefSel.indexOf(n)>-1; return '<button type="button" class="soft-chip'+(on?' on':'')+'" onclick="vgBenefToggle('+JSON.stringify(n).replace(/"/g,'&quot;')+')">'+(on?'✓ ':'')+esc(n)+'</button>'; }).join('');
+  var extras=vgBenefSel.filter(function(n){ return BENEFICIOS.indexOf(n)===-1; });
+  var sel=document.getElementById('vgBenefSelBox');
+  if(sel){ sel.innerHTML=extras.length?('<div class="vg-cat-h" style="margin-bottom:7px">Outros</div><div class="vg-chips">'+extras.map(function(n){ return '<span class="soft-chip on">'+esc(n)+' <span onclick="vgBenefToggle('+JSON.stringify(n).replace(/"/g,'&quot;')+')" style="cursor:pointer;font-weight:800">×</span></span>'; }).join('')+'</div>'):''; }
+}
+function vagaReset(){
+  vagaEditId=0; vgSkillsSel=[]; vgBenefSel=[];
+  setVal('vgTitulo','');setVal('vgModal','remoto');setVal('vgNivel','');setVal('vgEstado','');setVal('vgCidade','');setVal('vgSalMin','');setVal('vgSalMax','');setVal('vgDesc','');setVal('vgStatus','ativa');
+  var mt=document.getElementById('vgFormTitle'); if(mt) mt.textContent='Publicar nova vaga';
+  var sb=document.getElementById('vgSaveBtn'); if(sb) sb.textContent='Publicar';
+  var mb=document.getElementById('vgModeloBar'); if(mb) mb.style.display='flex';
+  var vm=document.getElementById('vgModelo'); if(vm) vm.value='';
+  renderVagaSkillChips(); renderVagaBenefChips();
+  var hint=document.getElementById('vgSkillHint'); if(hint) hint.innerHTML='';
+}
+function editarVaga(id){
+  api('/vagas/'+id).then(function(v){
+    vagaEditId=id;
+    setVal('vgTitulo',v.titulo||'');setVal('vgModal',v.modalidade||'remoto');setVal('vgNivel',v.nivel||'');
+    setVal('vgEstado',v.estado||''); locInit('vgEstado','vgCidade',v.estado,v.cidade);
+    setVal('vgSalMin',v.salario_min||'');setVal('vgSalMax',v.salario_max||'');setVal('vgDesc',v.descricao||'');
+    setVal('vgStatus',v.status==='pausada'?'pausada':'ativa');
+    vgSkillsSel=((v.skills)||[]).map(function(s){return (s&&s.nome)?s.nome:s;}).filter(Boolean);
+    vgBenefSel=(v.beneficios||[]).slice();
+    renderVagaSkillChips(); renderVagaBenefChips();
+    var mt=document.getElementById('vgFormTitle'); if(mt) mt.textContent='Editar vaga';
+    var sb=document.getElementById('vgSaveBtn'); if(sb) sb.textContent='Salvar alterações';
+    var mb=document.getElementById('vgModeloBar'); if(mb) mb.style.display='none';
+    var f=document.getElementById('vagaForm'); if(f) f.style.display='block'; window.scrollTo(0,0);
+  }).catch(function(e){ alertMsg(e.message); });
+}
+function vagaCancel(){ vagaReset(); var f=document.getElementById('vagaForm'); if(f) f.style.display='none'; }
 function fillVagaModelos(){
   var sel=document.getElementById('vgModelo'); if(!sel) return;
   var opts='<option value="">Começar do zero</option>';
@@ -1783,15 +1828,16 @@ function reloadMyVagas(){
     if(!list||!list.length){ box.innerHTML='<p class="muted">Você ainda não publicou vagas. Clique em “+ Publicar Vaga”.</p>'; return; }
     box.innerHTML=list.map(function(v){var st=(v.status==='pausada')?'pausada':'ativa';
       var meta=[v.modalidade,v.cidade,(v.salario_min?'R$ '+v.salario_min+(v.salario_max?'–'+v.salario_max:''):'')].filter(Boolean).map(esc).join(' · ');
-      return '<div class="card" style="margin-bottom:12px"><div class="pad"><div style="display:flex;align-items:center;gap:10px;margin-bottom:4px"><h4 style="font-size:15px">'+esc(v.titulo)+'</h4><span class="statuspill st-'+st+'">'+(st==='ativa'?'Ativa':'Pausada')+'</span></div><div class="muted" style="margin-bottom:12px">'+(meta||'—')+'</div><div style="display:flex;gap:24px;align-items:center"><div><span class="muted">◎ Views</span><br><b style="font-size:18px">'+(v.views||0)+'</b></div><div><span class="muted">👥 Interessados</span><br><b style="font-size:18px">'+(v.interessados||0)+'</b></div><div><span class="muted">📝 Candidaturas</span><br><b style="font-size:18px">'+(v.candidaturas||0)+'</b></div><div style="margin-left:auto"><button class="icobtn" title="Remover" onclick="deleteVaga('+v.id+')">🗑</button></div></div></div></div>';
+      return '<div class="card" style="margin-bottom:12px"><div class="pad"><div style="display:flex;align-items:center;gap:10px;margin-bottom:4px"><h4 style="font-size:15px">'+esc(v.titulo)+'</h4><span class="statuspill st-'+st+'">'+(st==='ativa'?'Ativa':'Pausada')+'</span></div><div class="muted" style="margin-bottom:12px">'+(meta||'—')+'</div><div style="display:flex;gap:24px;align-items:center"><div><span class="muted">◎ Views</span><br><b style="font-size:18px">'+(v.views||0)+'</b></div><div><span class="muted">👥 Interessados</span><br><b style="font-size:18px">'+(v.interessados||0)+'</b></div><div><span class="muted">📝 Candidaturas</span><br><b style="font-size:18px">'+(v.candidaturas||0)+'</b></div><div style="margin-left:auto;display:flex;gap:6px"><button class="btn ghost sm" onclick="editarVaga('+v.id+')">✎ Editar</button><button class="icobtn" title="Remover" onclick="deleteVaga('+v.id+')">🗑</button></div></div></div></div>';
     }).join('');
   }).catch(function(){});
 }
 function publicarVaga(){
   var titulo=(val('vgTitulo')||'').trim(); if(!titulo){ alertMsg('Informe o título da vaga.'); return; }
-  var skills=(vgSkillsSel||[]).slice();
-  var body={titulo:titulo,modalidade:val('vgModal'),nivel:val('vgNivel'),estado:val('vgEstado'),cidade:val('vgCidade'),salario_min:val('vgSalMin'),salario_max:val('vgSalMax'),descricao:val('vgDesc'),skills:skills,status:'ativa'};
-  api('/vagas',{method:'POST',body:body}).then(function(){ vagaFormToggle(); alertMsg('Vaga publicada! ✓'); reloadMyVagas(); }).catch(function(e){ alertMsg(e.message); });
+  var body={titulo:titulo,modalidade:val('vgModal'),nivel:val('vgNivel'),estado:val('vgEstado'),cidade:val('vgCidade'),salario_min:val('vgSalMin'),salario_max:val('vgSalMax'),descricao:val('vgDesc'),skills:(vgSkillsSel||[]).slice(),beneficios:(vgBenefSel||[]).slice(),status:val('vgStatus')||'ativa'};
+  var editing=vagaEditId>0;
+  var p=editing?api('/vagas/'+vagaEditId,{method:'PUT',body:body}):api('/vagas',{method:'POST',body:body});
+  p.then(function(){ vagaCancel(); alertMsg(editing?'Vaga atualizada! ✓':'Vaga publicada! ✓'); reloadMyVagas(); }).catch(function(e){ alertMsg(e.message); });
 }
 function deleteVaga(id){ if(!confirm('Remover esta vaga?')) return; api('/vagas/'+id,{method:'DELETE'}).then(function(){ alertMsg('Vaga removida.'); reloadMyVagas(); }).catch(function(e){ alertMsg(e.message); }); }
 
