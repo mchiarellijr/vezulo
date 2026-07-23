@@ -478,6 +478,11 @@
   .vg-cat-h{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
   .vg-chips{display:flex;flex-wrap:wrap;gap:7px}
   .vg-sel{margin-top:10px;padding:10px 12px;border:1px dashed var(--line-2);border-radius:12px;background:var(--blue-soft)}
+  .pipe-sel{border-radius:9px}
+  .pipe-sel.pipe-contato{border-color:var(--blue-2);color:var(--blue)}
+  .pipe-sel.pipe-processo{border-color:var(--orange-2);color:var(--orange-2)}
+  .pipe-sel.pipe-contratado{border-color:var(--green-2);color:var(--green-2);background:var(--green-bg)}
+  .pipe-sel.pipe-descartado{border-color:var(--red);color:var(--red)}
 
   /* ---------- REPUTAÇÃO / AVALIAÇÕES ---------- */
   .stars{color:#E0A23C;letter-spacing:1px;font-size:14px;white-space:nowrap}
@@ -2192,15 +2197,28 @@ function hydrateFavoritos(){
     }).join('');
   }).catch(function(){});
 }
+var PIPELINE_STAGES=[['novo','A contatar'],['contato','Contato realizado'],['processo','Em processo seletivo'],['contratado','Contratado'],['descartado','Não avançou']];
 function hydrateBanco(){
   var box=document.getElementById('bancoBox'); if(!box) return;
   api('/company/banco').then(function(list){
     if(!list||!list.length){ box.innerHTML='<p class="muted">Nenhum currículo desbloqueado ainda. Desbloqueie perfis em Buscar Talentos.</p>'; return; }
     box.innerHTML=list.map(function(c){
-      var av=esc((c.nome||'C').substring(0,2)).toUpperCase();
-      return '<div class="listcard"><div class="li">'+av+'</div><div><h4>'+esc(c.nome)+'</h4><div class="meta">'+[c.cargo,c.cidade].filter(Boolean).map(esc).join(' · ')+'</div></div><div class="actions"><button class="btn ghost" onclick="openTalento('+c.id+')">◉ Ver perfil</button><button class="btn dark" onclick="msgUser('+c.id+')">✉ Mensagem</button></div></div>';
+      var ini=esc((c.nome||'C').substring(0,2)).toUpperCase();
+      var stat=c.status_tratativa||'novo';
+      var opts=PIPELINE_STAGES.map(function(s){return '<option value="'+s[0]+'"'+(stat===s[0]?' selected':'')+'>'+esc(s[1])+'</option>';}).join('');
+      return '<div class="listcard"><div class="li" style="overflow:hidden">'+avatarInner(c.avatar,ini)+'</div>'
+        +'<div><h4>'+esc(c.nome)+'</h4><div class="meta">'+[c.cargo,c.cidade].filter(Boolean).map(esc).join(' · ')+'</div>'
+        +'<div style="margin-top:7px;display:flex;align-items:center;gap:7px"><span class="muted" style="font-size:11.5px">Tratativa:</span><select class="inp2 pipe-sel pipe-'+esc(stat)+'" style="width:auto;padding:5px 9px;font-size:12.5px;font-weight:600" onchange="bancoSetStatus('+c.id+',this)">'+opts+'</select></div></div>'
+        +'<div class="actions"><button class="btn ghost" onclick="openTalento('+c.id+')">◉ Ver perfil</button><button class="btn dark" onclick="msgUser('+c.id+')">✉ Mensagem</button></div></div>';
     }).join('');
   }).catch(function(){});
+}
+function bancoSetStatus(id,sel){
+  var v=sel.value;
+  sel.className='inp2 pipe-sel pipe-'+v;
+  api('/company/candidato/'+id+'/status',{method:'POST',body:{status:v}})
+    .then(function(){ alertMsg('Tratativa atualizada ✓'); })
+    .catch(function(e){ alertMsg(e.message); });
 }
 
 /* ---- Mensagens ---- */
@@ -2294,6 +2312,21 @@ function hydrateCandidateDashboard(){
     box.innerHTML=list.slice(0,3).map(recCard).join('');
   }).catch(function(){});
 }
+function renderROI(r){
+  var vz=(r.vezus_por_contratacao!=null)?(''+r.vezus_por_contratacao).replace('.',','):'—';
+  var tx=(r.taxa_conversao!=null)?((''+r.taxa_conversao).replace('.',',')+'%'):'—';
+  var cu=(r.custo_por_contratacao!=null)?('R$ '+r.custo_por_contratacao):'—';
+  setTxt('roiVezus',vz); setTxt('roiTaxa',tx); setTxt('roiCusto',cu);
+  var hint=document.getElementById('roiHint');
+  if(hint) hint.textContent=(r.contratacoes>0)?((r.desbloqueios||0)+' desbloqueio(s) · '+r.contratacoes+' contratação(ões)'):'Marque um candidato como "Contratado" no Banco de Currículos para ver seu ROI real.';
+}
+var PIPE_META=[['novo','A contatar','gray'],['contato','Contato realizado','blue'],['processo','Em processo','orange'],['contratado','Contratado','mint'],['descartado','Não avançou','red']];
+function renderPipeline(p){
+  var box=document.getElementById('pipeBox'); if(!box) return;
+  var total=0; PIPE_META.forEach(function(s){ total+=(p[s[0]]||0); });
+  if(!total){ box.innerHTML='<p class="muted" style="font-size:13px">Nenhum candidato desbloqueado ainda.</p>'; return; }
+  box.innerHTML=PIPE_META.map(function(s){ var n=p[s[0]]||0; if(!n&&s[0]==='descartado') return ''; return '<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0"><span class="chip '+({gray:'soft',blue:'',orange:'gold',mint:'mint',red:'soft'}[s[2]]||'soft')+'" style="font-size:11.5px">'+esc(s[1])+'</span><b style="font-size:15px">'+n+'</b></div>'; }).join('');
+}
 function renderFunnel(m){
   var box=document.getElementById('funnelBox'); if(!box) return;
   var vagas=m.vagas_publicadas||0, views=m.visualizacoes||0, cand=m.candidatos||0, match=m.matches_ia||0;
@@ -2315,6 +2348,7 @@ function hydrateCompanyDashboard(){
     var ring=document.getElementById('ringSaldo'); if(ring) ring.style.setProperty('--p', Math.min(100,(m.saldo_vezus||0)));
     if(m.contratacoes_mes) drawBar(m.contratacoes_mes.map(function(d){return [mesShort(d.mes), d.valor];}));
     renderFunnel(m);
+    renderROI(m.roi||{}); renderPipeline(m.pipeline||{});
     var fb=document.getElementById('feedBox');
     if(fb) fb.innerHTML=(m.feed&&m.feed.length)?m.feed.map(function(f){return feed('i-blue','◔',feedLabel(f.type),(f.created_at||''));}).join(''):'<p class="muted">Sem atividades ainda. Publique vagas e busque talentos para começar.</p>';
   }).catch(function(){});
@@ -2500,7 +2534,8 @@ var PAGES_E={
      +'<div id="dashTalents" class="grid" style="grid-template-columns:1fr 1fr"><p class="muted">Carregando…</p></div>'
    +'</div></div>'
   +'</div><div class="stack">'
-   +'<div class="card"><div class="pad"><h3 style="margin-bottom:6px">ROI dos Vezus</h3><p class="muted" style="margin-bottom:4px">O que outros sites não mostram com clareza</p><div class="roi"><div><b>16</b><span>Vezus / contratação</span></div><div><b>12,5%</b><span>desbloqueio → contrat.</span></div><div><b>R$ 80</b><span>custo / contratação</span></div></div></div></div>'
+   +'<div class="card"><div class="pad"><h3 style="margin-bottom:6px">ROI dos Vezus</h3><p class="muted" style="margin-bottom:4px">O que outros sites não mostram com clareza</p><div class="roi"><div><b id="roiVezus">—</b><span>Vezus / contratação</span></div><div><b id="roiTaxa">—</b><span>desbloqueio → contrat.</span></div><div><b id="roiCusto">—</b><span>custo / contratação</span></div></div><p class="muted" id="roiHint" style="font-size:11.5px;margin-top:10px"></p></div></div>'
+   +'<div class="card"><div class="pad"><h3 style="margin-bottom:8px">Pipeline de contratação</h3><div id="pipeBox"><p class="muted" style="font-size:13px">—</p></div><p class="muted" style="font-size:11.5px;margin-top:8px">Atualize a tratativa de cada candidato no <span class="more" onclick="navTo(\'banco\')" style="cursor:pointer">Banco de Currículos</span>.</p></div></div>'
    +'<div class="card"><div class="pad"><h3 style="margin-bottom:6px">Saldo de Vezus</h3><div style="display:flex;align-items:center;gap:14px;margin:8px 0 4px"><div class="ring" id="ringSaldo" style="--p:50;--c:var(--orange)"><div class="hole"><b id="ringSaldoNum">—</b><span>Vezus</span></div></div><div class="muted" id="saldoDesc">Consumo mensal registrado em tempo real.</div></div><button class="btn orange block" style="margin-top:8px" onclick="navTo(\'financeiro\')">Comprar pacote Growth</button></div></div>'
    +'<div class="card"><div class="pad"><h3 style="margin-bottom:8px">Feed de Atividades</h3><div id="feedBox"><p class="muted">Sem atividades ainda.</p></div></div></div>'
   +'</div></div></div>';},
