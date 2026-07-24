@@ -159,7 +159,14 @@
   .sf-out:hover{background:rgba(255,255,255,.16);color:#fff}
   /* topbar bell */
   .bell{position:relative;width:42px;height:42px;border-radius:12px;background:#fff;border:1px solid var(--line-2);cursor:pointer;font-size:16px;box-shadow:var(--shadow-sm)}
-  .bell-dot{position:absolute;top:10px;right:11px;width:8px;height:8px;border-radius:50%;background:var(--green);border:2px solid #fff}
+  .bell-wrap{position:relative}
+  .bell-dot{position:absolute;top:-4px;right:-4px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:var(--red);color:#fff;font-size:10px;font-weight:800;display:none;align-items:center;justify-content:center;border:2px solid #fff}
+  .bell-dot.show{display:flex}
+  .notif-drop{left:auto;right:0;width:330px}
+  .sd-item.nf-unread{background:var(--blue-soft)}
+  .sd-item.nf-unread:hover{background:var(--lilac-soft)}
+  .nf-foot{padding:8px 6px 4px;border-top:1px solid var(--line);margin-top:6px}
+  .btn.block{width:100%}
 
   .wrap{padding:26px 30px 60px;max-width:1160px}
   .page-h{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px;flex-wrap:wrap}
@@ -706,7 +713,10 @@
       </div>
       <div class="spacer"></div>
       <div id="vezusPill" class="vezus-pill hidden"><span class="v">V</span> <b>145</b></div>
-      <button class="bell" title="Notificações" aria-label="Notificações">🔔<span class="bell-dot"></span></button>
+      <div class="bell-wrap">
+        <button class="bell" id="bellBtn" title="Notificações" aria-label="Notificações" onclick="toggleNotif()">🔔<span class="bell-dot" id="bellDot"></span></button>
+        <div class="search-drop notif-drop" id="notifDrop"></div>
+      </div>
     </div>
     <div id="verifyBanner" class="verify-banner hidden"></div>
     <div id="pageContent"></div>
@@ -1164,7 +1174,7 @@ function enterApp(role){
   document.getElementById('whoRole').textContent = role==='E'?'Empresa':'Candidato';
   if(role==='E'){ api('/vezus/balance').then(function(b){ var p=document.getElementById('vezusPill'); if(p&&b){ p.innerHTML='<span class="v">V</span> <b>'+b.saldo+'</b>'; } }).catch(function(){}); }
   buildNav(); renderPage(); renderAppFooter(); refreshVerifyBanner(); go('app');
-  vzTourMaybe(role);
+  vzTourMaybe(role); startNotifPoll(); pushLoginCurrent();
 }
 
 /* ============ TOUR DE ONBOARDING (primeira vez) ============ */
@@ -1298,10 +1308,11 @@ function renderAppFooter(){
     +col('Legal',[['Termos de Uso',B+'termos'],['Privacidade',B+'privacidade'],['Cookies',B+'cookies']])
     +'</div>'+bottom;
 }
-function logout(){ VZ.token=null; VZ.user=null; go('login'); }
+function logout(){ pushLogout(); VZ.token=null; VZ.user=null; go('login'); }
 function vzBoot(){
   renderSignupFields();
   loadRamos();
+  initPush();
   api('/oauth/status',{auth:false}).then(function(s){ vzOAuth=s; applyOAuthVisibility(); }).catch(function(){ vzOAuth={google:false,linkedin:false}; applyOAuthVisibility(); });
   if(handleEmailLinks()) return;   // ?reset= abre a tela de redefinição
   if(handleOAuthCallback()) return;
@@ -1359,7 +1370,60 @@ function gsEmpresa(e){
     +'<p style="margin-top:12px;font-size:13.5px;color:var(--muted)">Fique de olho nas vagas desta empresa em <b>Vagas Recomendadas</b>.</p>'
     +'<div style="margin-top:14px"><button class="btn primary" onclick="closeModal();navTo(\'vagas\')">Ver vagas</button></div></div>');
 }
-document.addEventListener('click',function(ev){ var w=document.querySelector('.search-wrap'); if(w&&!w.contains(ev.target)) closeSearchDrop(); });
+document.addEventListener('click',function(ev){
+  var w=document.querySelector('.search-wrap'); if(w&&!w.contains(ev.target)) closeSearchDrop();
+  var b=document.querySelector('.bell-wrap'); if(b&&!b.contains(ev.target)){ var nd=document.getElementById('notifDrop'); if(nd) nd.classList.remove('show'); }
+});
+
+/* ---- Notificações (sino) ---- */
+var notifCache=[], notifPoll=null;
+function setNotifCount(n){ var d=document.getElementById('bellDot'); if(!d) return; if(n>0){ d.textContent=n>9?'9+':n; d.classList.add('show'); } else { d.classList.remove('show'); } }
+function loadNotifCount(){ api('/me/notifs').then(function(r){ setNotifCount((r&&r.nao_lidas)||0); }).catch(function(){}); }
+function startNotifPoll(){ if(notifPoll) return; loadNotifCount(); notifPoll=setInterval(loadNotifCount,60000); }
+function notifIcon(t){ return {unlock:'🔓',application:'📝',message:'✉',review:'⭐',view:'👀'}[t]||'🔔'; }
+function notifFooter(){ return pushReady?'<div class="nf-foot"><button class="btn ghost sm block" onclick="enablePush()">🔔 Ativar push no celular</button></div>':''; }
+function renderNotifs(list){
+  var dd=document.getElementById('notifDrop'); if(!dd) return;
+  if(!list||!list.length){ dd.innerHTML='<div class="sd-group">Notificações</div><div class="sd-empty">Nada por aqui ainda. 🎉</div>'+notifFooter(); return; }
+  dd.innerHTML='<div class="sd-group">Notificações</div>'+list.map(function(n){
+    return '<div class="sd-item'+(n.lida?'':' nf-unread')+'" onclick="notifGo('+JSON.stringify(n.link||'').replace(/"/g,'&quot;')+')"><div class="sd-ic">'+notifIcon(n.tipo)+'</div><div><h5>'+esc(n.titulo)+'</h5>'+(n.corpo?'<div class="sd-sub">'+esc(n.corpo)+'</div>':'')+'</div></div>';
+  }).join('')+notifFooter();
+}
+function toggleNotif(){
+  var dd=document.getElementById('notifDrop'); if(!dd) return;
+  if(dd.classList.contains('show')){ dd.classList.remove('show'); return; }
+  closeSearchDrop();
+  dd.classList.add('show'); dd.innerHTML='<div class="sd-empty">Carregando…</div>';
+  api('/me/notifs').then(function(r){
+    notifCache=(r&&r.itens)||[]; renderNotifs(notifCache);
+    if((r&&r.nao_lidas)||0){ api('/me/notifs/read',{method:'POST',body:{}}).then(function(){ setNotifCount(0); }).catch(function(){}); }
+  }).catch(function(){ dd.innerHTML='<div class="sd-empty">Não foi possível carregar.</div>'; });
+}
+function notifGo(link){ var dd=document.getElementById('notifDrop'); if(dd) dd.classList.remove('show'); if(link){ navTo(link); } }
+
+/* ---- Push (OneSignal) ---- */
+var pushReady=false;
+function initPush(){
+  api('/push/config',{auth:false}).then(function(c){
+    if(!c||!c.app_id) return;
+    window.OneSignalDeferred=window.OneSignalDeferred||[];
+    var s=document.createElement('script'); s.src='https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js'; s.defer=true; document.head.appendChild(s);
+    window.OneSignalDeferred.push(function(OneSignal){
+      Promise.resolve(OneSignal.init({appId:c.app_id,allowLocalhostAsSecureOrigin:true})).then(function(){ pushReady=true; pushLoginCurrent(); }).catch(function(){});
+    });
+  }).catch(function(){});
+}
+function pushLoginCurrent(){
+  if(!pushReady||!window.OneSignal) return;
+  var u=VZ.user; if(u&&u.id){ try{ window.OneSignal.login(String(u.id)); }catch(e){} }
+}
+function pushLogout(){ if(window.OneSignal){ try{ window.OneSignal.logout(); }catch(e){} } }
+function enablePush(){
+  if(!pushReady||!window.OneSignal){ alertMsg('Notificações push ainda não estão disponíveis aqui.'); return; }
+  try{
+    Promise.resolve(window.OneSignal.Notifications.requestPermission()).then(function(){ pushLoginCurrent(); alertMsg('Push ativado! Você será avisado no celular. 🔔'); }).catch(function(){});
+  }catch(e){ alertMsg('Não foi possível ativar o push.'); }
+}
 function toggleSide(force){
   var s=document.querySelector('.side'), b=document.getElementById('backdrop'); if(!s) return;
   var open = (force===undefined) ? !s.classList.contains('open') : force;
