@@ -420,6 +420,18 @@
   .verify-banner button{border:0;border-radius:9px;padding:7px 13px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit}
   .verify-banner .vb-resend{background:var(--orange-2);color:#fff}
   .verify-banner .vb-x{background:transparent;color:#8a5a13;padding:7px 8px}
+  /* Aviso de perfil incompleto para desbloqueio (< 50%) */
+  .lockwarn{background:var(--orange-bg);border:1px solid #f0d9ac;color:#8a5a13;border-radius:12px;padding:11px 14px;font-size:13px;line-height:1.5}
+  .lockwarn-head{font-weight:700;display:flex;align-items:flex-start;gap:7px}
+  .lockwarn .bar{margin:9px 0 4px;height:7px;border-radius:999px;background:#f0ddb8;overflow:hidden}
+  .lockwarn .bar>i{display:block;height:100%;background:var(--orange-2);border-radius:999px}
+  .lockwarn details{margin-top:8px}
+  .lockwarn summary{cursor:pointer;font-weight:600;font-size:12.5px;list-style:none;color:#8a5a13;text-decoration:underline;text-underline-offset:2px}
+  .lockwarn summary::-webkit-details-marker{display:none}
+  .lockwarn details p{margin:8px 0 0;font-size:12.5px;color:#7a5416;font-weight:400}
+  .lockwarn.compact{padding:8px 11px;font-size:12px}
+  .btn.disabledlook{opacity:.5;cursor:not-allowed;pointer-events:none}
+  .chip.warn{background:var(--orange-bg);color:#8a5a13}
 
   /* ---------- APP FOOTER ---------- */
   .app-footer{margin:40px 0 0;padding:28px 24px 22px;border-top:1px solid var(--line);color:var(--muted)}
@@ -2207,6 +2219,25 @@ function buscarTalentos(){
   }).catch(function(e){ if(box) box.innerHTML='<p class="muted">'+esc(e.message)+'</p>'; });
 }
 var TAL_GRADS=['linear-gradient(135deg,#4C2FBF,#9D7BFF)','linear-gradient(135deg,#9D7BFF,#4C2FBF)','linear-gradient(135deg,#5B3DEF,#22C58B)','linear-gradient(135deg,#4C2FBF,#5B3DEF)'];
+var UNLOCK_MIN=50;
+/* Aviso (com "dropdown" explicativo) quando o perfil está abaixo do mínimo p/ desbloqueio. */
+function unlockNotice(pct,compact){
+  pct=Math.max(0,Math.min(100,pct||0));
+  return '<div class="lockwarn'+(compact?' compact':'')+'">'
+    +'<div class="lockwarn-head"><span>⚠️</span><span>Perfil <b>'+pct+'%</b> preenchido — abaixo dos <b>'+UNLOCK_MIN+'%</b> mínimos para desbloqueio.</span></div>'
+    +'<div class="bar"><i style="width:'+pct+'%"></i></div>'
+    +(compact?'':'<details><summary>Por que não consigo desbloquear?</summary>'
+        +'<p>Para proteger seus Vezus, só liberamos o desbloqueio de perfis com pelo menos <b>'+UNLOCK_MIN+'% de completude</b>. Assim você não gasta crédito com currículos ainda muito incompletos. Quando o candidato completar o perfil, ele fica disponível automaticamente.</p></details>')
+    +'</div>';
+}
+/* Mensagem amigável quando o backend recusa o desbloqueio por baixa completude. */
+function unlockErr(e){
+  var msg=(e&&e.message)||'';
+  if((e&&e.code==='low_quality')||/completo o suficiente|incompleto/i.test(msg)){
+    return 'Este perfil ainda está abaixo de '+UNLOCK_MIN+'% de completude e não pode ser desbloqueado. Nenhum Vezu foi cobrado.';
+  }
+  return msg||'Não foi possível desbloquear agora.';
+}
 function renderTalent(t,i){
   var un=t.unlocked;
   var badge=un?'<span class="chip mint">✓ desbloqueado</span>':'<span class="chip soft">🔒 bloqueado</span>';
@@ -2218,9 +2249,10 @@ function renderTalent(t,i){
   var nameH='<div class="t-name'+(un?'':' blur')+'">'+esc(t.nome)+'</div>';
   var cta = un
     ? '<div class="row" style="gap:8px"><button class="btn ghost sm" onclick="openTalento('+t.id+')">Ver currículo</button><button class="btn primary sm" onclick="msgUser('+t.id+')">Mensagem</button></div>'
-    : (t.completude>=50
+    : (t.completude>=UNLOCK_MIN
         ? '<button class="btn orange sm" onclick="desbloquear('+t.id+',this)">🪙 Desbloquear · 1 Vezu</button>'
-        : '<span class="muted" style="font-size:12px">perfil incompleto</span>');
+        : '<span class="chip warn" title="Perfil abaixo de '+UNLOCK_MIN+'%">🔒 incompleto</span>');
+  var blocked=!un && (t.completude||0)<UNLOCK_MIN;
   return '<div class="talent">'
     +'<span class="lockbadge">'+badge+'</span>'
     +'<div class="lockrow"><div class="avatar-lg'+(un?'':' blur')+'" style="background:'+TAL_GRADS[(i||0)%4]+';overflow:hidden" onclick="openTalento('+t.id+')">'+av+'</div>'
@@ -2229,6 +2261,7 @@ function renderTalent(t,i){
     +'<div class="between" style="padding-top:12px;border-top:1px solid var(--line)">'
       +'<div class="t-score"><b>'+(t.completude||0)+'%</b> <small>perfil</small></div>'
       +cta+'</div>'
+    +(blocked?'<div style="margin-top:10px">'+unlockNotice(t.completude,true)+'</div>':'')
     +'<button class="btn ghost sm" style="margin-top:10px;width:100%" onclick="toggleFav('+t.id+',this)">'+(t.favorito?'★ Favoritado':'☆ Favoritar')+'</button>'
     +'</div>';
 }
@@ -2243,7 +2276,7 @@ function desbloquear(id,btn){ if(btn){btn.disabled=true;btn.textContent='Desbloq
     alertMsg('Perfil desbloqueado! Saldo: '+d.saldo+' Vezus');
     var pill=document.getElementById('vezusPill'); if(pill) pill.innerHTML='<span class="v">V</span> <b>'+d.saldo+'</b>';
     buscarTalentos();
-  }).catch(function(e){ if(btn){btn.disabled=false;btn.textContent='🔓 Desbloquear Perfil · 1 Vezu';} alertMsg(e.message); });
+  }).catch(function(e){ if(btn){btn.disabled=false;btn.textContent='🪙 Desbloquear · 1 Vezu';} alertMsg(unlockErr(e)); if(/completo o suficiente|incompleto/i.test((e&&e.message)||'')) buscarTalentos(); });
 }
 function msgUser(id){ closeModal(); navTo('mensagens'); setTimeout(function(){ openThread(id); },350); }
 
@@ -2266,7 +2299,9 @@ function openTalento(id){
     var edu=((t.formacao)||[]).map(function(e){return '<div class="listcard"><div class="li">◑</div><div><h4>'+esc(e.curso||e.titulo||'—')+'</h4><div class="meta">'+[e.instituicao,e.nivel,e.ano_conclusao].filter(Boolean).map(esc).join(' · ')+'</div></div></div>';}).join('');
     var cta = t.unlocked
       ? '<div style="padding:12px;background:var(--green-bg);border-radius:10px;font-size:13px">✓ ✉ '+esc(t.contato.email)+(t.contato.telefone?' · 📱 '+esc(t.contato.telefone)+'<a class="wa-btn" href="'+waHref(t.contato.telefone,t.nome)+'" target="_blank" rel="noopener">💬 WhatsApp</a>':'')+(t.contato.linkedin?' · '+esc(t.contato.linkedin):'')+'</div><div class="unlock"><button class="btn primary" style="flex:1" onclick="msgUser('+t.id+')">✉ Enviar mensagem</button></div>'
-      : '<div class="unlock"><button class="btn dark" style="flex:1" onclick="desbloquearModal('+t.id+',this)">🔓 Desbloquear Perfil · 1 Vezu</button></div>'+(t.completude>=50?'':'<p class="muted" style="margin-top:8px">Perfil ainda incompleto para desbloqueio.</p>');
+      : (t.completude>=UNLOCK_MIN
+          ? '<div class="unlock"><button class="btn dark" style="flex:1" onclick="desbloquearModal('+t.id+',this)">🔓 Desbloquear Perfil · 1 Vezu</button></div>'
+          : '<div class="unlock"><button class="btn dark disabledlook" style="flex:1" disabled aria-disabled="true">🔒 Desbloqueio indisponível</button></div><div style="margin-top:10px">'+unlockNotice(t.completude,false)+'</div>');
     openModal('<div class="pad">'
       +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><div style="display:flex;gap:14px;align-items:center"><div class="avatar'+(t.unlocked?'':' blur')+'" style="width:52px;height:52px;font-size:16px;overflow:hidden">'+avatarInner(t.avatar,esc((t.nome||'?').substring(0,2)))+'</div><div><h2 style="font-size:20px">'+esc(t.nome)+'</h2><div class="muted">'+esc(t.cargo||'—')+(t.cidade?' · '+esc(t.cidade):'')+' · '+(t.completude||0)+'% perfil</div>'+(t.disponivel?'<div style="margin-top:5px"><span class="chip mint">🟢 '+esc(t.disponivel)+'</span></div>':'')+'</div></div><button class="icobtn" onclick="closeModal()">✕</button></div>'
       +'<div style="margin-top:10px"><button class="btn ghost" onclick="toggleFav('+t.id+',this)">'+(t.favorito?'★ Favoritado':'☆ Favoritar')+'</button></div>'
@@ -2286,7 +2321,7 @@ function desbloquearModal(id,btn){ if(btn){btn.disabled=true;btn.textContent='De
     openTalento(id);
     if(state.page==='buscar') buscarTalentos();
     if(state.page==='banco') hydrateBanco();
-  }).catch(function(e){ if(btn){btn.disabled=false;btn.textContent='🔓 Desbloquear Perfil · 1 Vezu';} alertMsg(e.message); });
+  }).catch(function(e){ if(btn){btn.disabled=false;btn.textContent='🔓 Desbloquear Perfil · 1 Vezu';} alertMsg(unlockErr(e)); if(/completo o suficiente|incompleto/i.test((e&&e.message)||'')) openTalento(id); });
 }
 
 /* ---- Match Inteligente / Favoritos / Banco (empresa) ---- */
