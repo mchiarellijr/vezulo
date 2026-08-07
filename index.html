@@ -17,6 +17,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- Vezulo Analytics (GA4): loader servido pelo WordPress; ligar/desligar e o Measurement ID ficam no wp-admin -->
+<script>window.vz=window.vz||{ready:false,page:function(){},track:function(){},setUser:function(){},consent:function(){},clientId:function(){return null;}};</script>
+<script src="https://vezulo.com.br/wp-json/vezulo/v1/analytics/loader.js" async></script>
 <style>
   :root{
     /* Identidade Vezulo — Manual de Marca v1.0 (redesign) */
@@ -698,6 +701,21 @@
   </div>
 </div>
 
+<!-- ============ GATE: confirmar e-mail (bloqueio total) ============ -->
+<div id="scr-gate" class="hidden" style="min-height:100vh;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px">
+  <div class="card" style="max-width:460px;width:100%">
+    <div class="pad" style="text-align:center;padding:30px 26px">
+      <div class="brand" style="justify-content:center;margin-bottom:14px"><div class="logo"></div><div><b style="font-size:20px">VEZULO</b></div></div>
+      <div style="font-size:42px;line-height:1;margin-bottom:8px">✉️</div>
+      <h1 style="font-size:22px;margin-bottom:8px">Confirme seu e-mail</h1>
+      <p class="muted" style="margin-bottom:20px">Enviamos um link de confirmação para <b id="gateEmail">seu e-mail</b>. Confirme para liberar seu acesso ao Vezulo — verifique também a caixa de spam.</p>
+      <button class="btn primary block" onclick="recheckVerified(this)" style="margin-bottom:10px">Já confirmei — entrar</button>
+      <button class="btn ghost block" onclick="resendVerify(this)" style="margin-bottom:16px">Reenviar e-mail</button>
+      <button class="btn ghost sm" onclick="logout()">Sair</button>
+    </div>
+  </div>
+</div>
+
 <!-- ================= APP ================= -->
 <div id="scr-app" class="app hidden">
   <aside class="side">
@@ -742,7 +760,7 @@ var state={screen:'landing', role:'C', page:'dashboard', loginRole:'C', signupRo
 
 function go(scr){
   state.screen=scr;
-  ['landing','login','forgot','reset','signup','onboarding','app'].forEach(function(s){
+  ['landing','login','forgot','reset','signup','onboarding','gate','app'].forEach(function(s){
     var el=document.getElementById('scr-'+s); if(el) el.classList.toggle('hidden', s!==scr);
   });
   if(scr==='signup') renderSignupFields();
@@ -879,8 +897,9 @@ var obState={role:'C',step:0,data:{},formacao:[],experiencia:[],idiomas:[],hard:
 function obTitles(){ return obState.role==='E'?OB_TITLES_E:OB_TITLES; }
 
 function obInit(role){
-  loadCatalog();
   role=(role==='E'||role==='empresa')?'E':((role==='C'||role==='candidato')?'C':(roleToCode((VZ.user&&VZ.user.role)||'candidato')));
+  if(VZ.user && !VZ.user.email_verified){ state.pendingOnboarding=role; showVerifyGate(); return; }
+  loadCatalog();
   obState={role:role,step:0,data:{},formacao:[],experiencia:[],idiomas:[{idioma:'Português',nivel:'Nativo'}],hard:[],soft:[],conhecimentos:[],estados:[],cnh:[]};
   var head=document.getElementById('obHead'), sub=document.getElementById('obSub');
   if(role==='E'){
@@ -1134,7 +1153,7 @@ function handleEmailLinks(){
     var uid=parseInt(p.get('uid'),10)||0, token=p.get('verify');
     try{ history.replaceState({},'',(window.location.pathname||'/')); }catch(e){}
     api('/auth/verify-email',{method:'POST',auth:false,body:{uid:uid,token:token}})
-      .then(function(d){ alertMsg((d&&d.msg)||'E-mail confirmado! ✓'); if(VZ.user){ var u=VZ.user; u.email_verified=true; VZ.user=u; refreshVerifyBanner(); } })
+      .then(function(d){ alertMsg((d&&d.msg)||'E-mail confirmado! ✓'); if(VZ.token){ recheckVerified(null,true); } else if(VZ.user){ var u=VZ.user; u.email_verified=true; VZ.user=u; refreshVerifyBanner(); } })
       .catch(function(e){ alertMsg(e.message); });
     // não retorna true: segue o boot normal (login ou app)
   }
@@ -1176,6 +1195,7 @@ function doSignup(){
 
 /* ---- app ---- */
 function enterApp(role){
+  if(VZ.user && !VZ.user.email_verified){ showVerifyGate(); return; }
   state.role=role; state.page='dashboard';
   document.getElementById('vezusPill').classList.toggle('hidden', role!=='E');
   var u=VZ.user||{}, nome=u.nome||(role==='E'?'Empresa':'Candidato');
@@ -1187,6 +1207,7 @@ function enterApp(role){
   if(role==='E'){ api('/vezus/balance').then(function(b){ var p=document.getElementById('vezusPill'); if(p&&b){ p.innerHTML='<span class="v">V</span> <b>'+b.saldo+'</b>'; } }).catch(function(){}); }
   buildNav(); renderPage(); renderAppFooter(); refreshVerifyBanner(); go('app');
   vzTourMaybe(role); startNotifPoll(); pushLoginCurrent();
+  try{ if(VZ.user){ vz.setUser(VZ.user.id, VZ.user.role); } }catch(e){}
 }
 
 /* ============ TOUR DE ONBOARDING (primeira vez) ============ */
@@ -1261,8 +1282,32 @@ function refreshVerifyBanner(){
 function resendVerify(btn){
   if(btn){ btn.disabled=true; btn.textContent='Enviando…'; }
   api('/auth/resend-verification',{method:'POST'})
-    .then(function(d){ alertMsg((d&&d.msg)||'E-mail reenviado.'); if(btn){ btn.textContent='Enviado ✓'; } })
+    .then(function(d){ alertMsg((d&&d.msg)||'E-mail reenviado.'); if(btn){ btn.textContent='Enviado ✓'; setTimeout(function(){ btn.disabled=false; btn.textContent='Reenviar e-mail'; },4000); } })
     .catch(function(e){ if(btn){ btn.disabled=false; btn.textContent='Reenviar e-mail'; } alertMsg(e.message); });
+}
+
+/* ---- Bloqueio total até confirmar o e-mail ---- */
+var gatePoll=null;
+function showVerifyGate(){
+  var em=document.getElementById('gateEmail'); if(em) em.textContent=(VZ.user&&VZ.user.email)||'seu e-mail';
+  go('gate');
+  startGatePoll();
+}
+function startGatePoll(){ if(gatePoll) return; gatePoll=setInterval(function(){ recheckVerified(null,true); },6000); }
+function stopGatePoll(){ if(gatePoll){ clearInterval(gatePoll); gatePoll=null; } }
+function recheckVerified(btn,silent){
+  if(btn){ btn.disabled=true; btn.textContent='Verificando…'; }
+  api('/auth/me').then(function(me){
+    VZ.user=me;
+    if(me && me.email_verified){
+      stopGatePoll();
+      if(state.pendingOnboarding){ var r=state.pendingOnboarding; state.pendingOnboarding=null; obInit(r); }
+      else { enterApp(roleToCode(me.role)); }
+    } else {
+      if(btn){ btn.disabled=false; btn.textContent='Já confirmei — entrar'; }
+      if(!silent) alertMsg('Ainda não confirmado. Clique no link do e-mail e tente novamente.');
+    }
+  }).catch(function(e){ if(btn){ btn.disabled=false; btn.textContent='Já confirmei — entrar'; } if(!silent) alertMsg(e.message); });
 }
 
 /* ---- Rodapé do app (links institucionais vindos do WordPress) ---- */
@@ -1320,7 +1365,7 @@ function renderAppFooter(){
     +col('Legal',[['Termos de Uso',B+'termos'],['Privacidade',B+'privacidade'],['Cookies',B+'cookies']])
     +'</div>'+bottom;
 }
-function logout(){ pushLogout(); VZ.token=null; VZ.user=null; go('login'); }
+function logout(){ pushLogout(); stopGatePoll(); state.pendingOnboarding=null; VZ.token=null; VZ.user=null; go('login'); }
 function vzBoot(){
   renderSignupFields();
   loadRamos();
@@ -1450,6 +1495,7 @@ function renderPage(){
   document.getElementById('pageContent').innerHTML = fn ? fn() : '<div class="wrap"><div class="card"><div class="pad">Página em construção.</div></div></div>';
   if(state.page==='dashboard') drawCharts();
   vzHydrate();
+  try{ vz.page('/'+state.page); }catch(e){}
 }
 
 /* ============ HIDRATAÇÃO (dados reais da API) ============ */
